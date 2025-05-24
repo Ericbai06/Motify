@@ -1,0 +1,31 @@
+package org.example.motify.Entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import java.util.List;
+
+@Entity
+@Table(name = "cars")
+@Data
+public class Car {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long carId;
+
+    @Column(nullable = false)
+    private String brand;
+
+    @Column(nullable = false)
+    private String model;
+
+    @Column(nullable = false, unique = true)
+    private String licensePlate;  // 车牌号
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @OneToMany(mappedBy = "car", cascade = CascadeType.ALL)
+    private List<MaintenanceRecord> maintenanceRecords;
+
+}
