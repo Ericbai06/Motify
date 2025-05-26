@@ -5,25 +5,27 @@ import org.example.motify.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class AdminService {
     @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
     
     @Autowired
-    private RepairmanRepository repairmanRepository;
+    private final RepairmanRepository repairmanRepository;
     
     @Autowired
-    private CarRepository carRepository;
+    private final CarRepository carRepository;
     
     @Autowired
-    private MaintenanceItemRepository MaintenanceItemRepository;
+    private final MaintenanceItemRepository maintenanceItemRepository;
     
     @Autowired
-    private MaterialRepository materialRepository;
+    private final MaterialRepository materialRepository;
     
     @Autowired
-    private SalaryRepository salaryRepository;
+    private final SalaryRepository salaryRepository;
 } 

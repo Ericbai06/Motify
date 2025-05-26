@@ -17,8 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.example.motify.util.PasswordEncoder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -44,9 +43,6 @@ class UserServiceTest {
     @Mock
     private RepairmanRepository repairmanRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
     @InjectMocks
     private UserService userService;
 
@@ -63,7 +59,6 @@ class UserServiceTest {
         user.setPhone("13800138000");
 
         when(userRepository.existsByUsername(anyString())).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         User result = userService.register(user);
@@ -89,11 +84,10 @@ class UserServiceTest {
     void loginUser_Success() {
         User user = new User();
         user.setUsername("testUser");
-        user.setPassword("encodedPassword");
+        user.setPassword(PasswordEncoder.encode("password123"));
         user.setPhone("13800138000");
 
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
 
         Optional<User> result = userService.login("testUser", "password123");
         assertTrue(result.isPresent());
@@ -104,10 +98,9 @@ class UserServiceTest {
     void loginUser_Failure() {
         User user = new User();
         user.setUsername("testUser");
-        user.setPassword("encodedPassword");
+        user.setPassword(PasswordEncoder.encode("password123"));
 
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
 
         assertThrows(AuthenticationException.class, () -> userService.login("testUser", "wrongPassword"));
     }

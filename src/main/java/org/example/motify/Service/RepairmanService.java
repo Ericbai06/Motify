@@ -5,35 +5,27 @@ import org.example.motify.Repository.*;
 import org.example.motify.Exception.ResourceNotFoundException;
 import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
+import org.example.motify.util.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class RepairmanService {
     @Autowired
-    private RepairmanRepository repairmanRepository;
-    
+    private final RepairmanRepository repairmanRepository;
     @Autowired
-    private MaintenanceItemRepository MaintenanceItemRepository;
-
+    private final MaintenanceItemRepository maintenanceItemRepository;
+    @Autowired
     private final MaterialRepository materialRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final CarRepository carRepository;
-
     @Autowired
-    public RepairmanService(MaterialRepository materialRepository,
-                          PasswordEncoder passwordEncoder,
-                          CarRepository carRepository) {
-        this.materialRepository = materialRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.carRepository = carRepository;
-    }
+    private final CarRepository carRepository;
 
     public Repairman register(Repairman repairman) {
         if (repairman.getUsername() == null || repairman.getUsername().trim().isEmpty()) {
@@ -45,7 +37,7 @@ public class RepairmanService {
         if (repairmanRepository.existsByUsername(repairman.getUsername())) {
             throw new BadRequestException("用户名已存在");
         }
-        repairman.setPassword(passwordEncoder.encode(repairman.getPassword()));
+        repairman.setPassword(PasswordEncoder.encode(repairman.getPassword()));
         return repairmanRepository.save(repairman);
     }
 
@@ -58,7 +50,7 @@ public class RepairmanService {
             throw new BadRequestException("密码不能为空");
         }
         return repairmanRepository.findByUsername(username)
-                .filter(repairman -> passwordEncoder.matches(password, repairman.getPassword()))
+                .filter(repairman -> PasswordEncoder.matches(password, repairman.getPassword()))
                 .or(() -> {
                     throw new AuthenticationException("用户名或密码错误");
                 });
@@ -93,7 +85,7 @@ public class RepairmanService {
         if (recordId == null) {
             throw new BadRequestException("维修记录ID不能为空");
         }
-        MaintenanceItem existingRecord = MaintenanceItemRepository.findById(recordId)
+        MaintenanceItem existingRecord = maintenanceItemRepository.findById(recordId)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", recordId));
         
         // 更新维修进度
@@ -114,7 +106,7 @@ public class RepairmanService {
             existingRecord.setReminder(record.getReminder());
         }
         
-        return MaintenanceItemRepository.save(existingRecord);
+        return maintenanceItemRepository.save(existingRecord);
     }
 
     public MaintenanceItem saveMaintenanceItem(MaintenanceItem record) {
@@ -127,7 +119,7 @@ public class RepairmanService {
         if (record.getProgress() < 0 || record.getProgress() > 100) {
             throw new BadRequestException("维修进度必须在0-100之间");
         }
-        return MaintenanceItemRepository.save(record);
+        return maintenanceItemRepository.save(record);
     }
 
     @Transactional(readOnly = true)
@@ -160,10 +152,10 @@ public class RepairmanService {
 
     public MaintenanceItem acceptMaintenanceItem(Long repairmanId, Long recordId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
-                .orElseThrow(() -> new RuntimeException("维修人员不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
         
-        MaintenanceItem record = MaintenanceItemRepository.findById(recordId)
-                .orElseThrow(() -> new RuntimeException("维修记录不存在"));
+        MaintenanceItem record = maintenanceItemRepository.findById(recordId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", recordId));
         
         // 更新维修记录状态
         record.setProgress(10); // 开始维修，设置初始进度
@@ -177,6 +169,6 @@ public class RepairmanService {
         }
         record.getRecordInfo().setUpdateTime(java.time.LocalDateTime.now());
         
-        return MaintenanceItemRepository.save(record);
+        return maintenanceItemRepository.save(record);
     }
 } 

@@ -7,31 +7,29 @@ import org.example.motify.Exception.ResourceNotFoundException;
 import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.example.motify.util.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
 
-
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class UserService {
     @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
     
     @Autowired
-    private CarRepository carRepository;
+    private final CarRepository carRepository;
     
     @Autowired
-    private MaintenanceItemRepository MaintenanceItemRepository;
+    private final MaintenanceItemRepository maintenanceItemRepository;
     
     @Autowired
-    private RepairmanRepository repairmanRepository;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final RepairmanRepository repairmanRepository;
 
     public User register(User user) {
         // 参数验证
@@ -51,7 +49,7 @@ public class UserService {
         }
         
         // 加密密码
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setPassword(PasswordEncoder.encode(user.getPassword()));
         
         // 保存用户
         return userRepository.save(user);
@@ -78,7 +76,7 @@ public class UserService {
         
         // 查找用户并验证密码
         return userRepository.findByUsername(username)
-                .filter(user -> passwordEncoder.matches(password, user.getPassword()))
+                .filter(user -> PasswordEncoder.matches(password, user.getPassword()))
                 .or(() -> {
                     throw new AuthenticationException("用户名或密码错误");
                 });
@@ -118,7 +116,7 @@ public class UserService {
         }
         
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
+            user.setPassword(PasswordEncoder.encode(userDetails.getPassword()));
         }
         
         if (userDetails.getPhone() != null) {
@@ -185,7 +183,7 @@ public class UserService {
         }
         
         // 通过Repository查询该用户的所有维修记录
-        return MaintenanceItemRepository.findByCar_User_UserId(userId);
+        return maintenanceItemRepository.findByCar_User_UserId(userId);
     }
 
     /**
@@ -236,7 +234,7 @@ public class UserService {
         int randomIndex = (int) (Math.random() * availableRepairmen.size());
         record.getRepairmen().add(availableRepairmen.get(randomIndex));
         
-        return MaintenanceItemRepository.save(record);
+        return maintenanceItemRepository.save(record);
     }
 
     /**
@@ -264,7 +262,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "phone", phone));
         
         // 更新密码
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(PasswordEncoder.encode(newPassword));
         userRepository.save(user);
     }
 

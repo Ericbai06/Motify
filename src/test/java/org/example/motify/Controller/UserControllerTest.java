@@ -6,15 +6,13 @@ import org.example.motify.Entity.MaintenanceItem;
 import org.example.motify.Entity.User;
 import org.example.motify.Enum.MaintenanceStatus;
 import org.example.motify.Service.UserService;
-import org.example.motify.config.SecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
@@ -30,8 +28,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UserController.class)
-@Import(SecurityConfig.class)
+@SpringBootTest
+@AutoConfigureMockMvc(addFilters = false)
 class UserControllerTest {
 
     @Autowired
@@ -71,7 +69,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void register_Success() throws Exception {
         when(userService.register(any(User.class))).thenReturn(testUser);
 
@@ -87,7 +84,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void login_Success() throws Exception {
         when(userService.login(anyString(), anyString())).thenReturn(Optional.of(testUser));
 
@@ -107,7 +103,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void getUser_Success() throws Exception {
         when(userService.getUserById(anyLong())).thenReturn(testUser);
 
@@ -121,7 +116,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void updateUser_Success() throws Exception {
         when(userService.updateUser(anyLong(), any(User.class))).thenReturn(testUser);
 
@@ -137,7 +131,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void getUserCars_Success() throws Exception {
         List<Car> cars = Arrays.asList(testCar);
         when(userService.getUserCars(anyLong())).thenReturn(cars);
@@ -153,7 +146,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void addCar_Success() throws Exception {
         when(userService.addCar(anyLong(), any(Car.class))).thenReturn(testCar);
 
@@ -170,7 +162,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void getUserMaintenanceItems_Success() throws Exception {
         List<MaintenanceItem> items = Arrays.asList(testMaintenanceItem);
         when(userService.getUserMaintenanceItems(anyLong())).thenReturn(items);
@@ -186,7 +177,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void submitRepairRequest_Success() throws Exception {
         when(userService.submitRepairRequest(anyLong(), anyLong(), anyString()))
                 .thenReturn(testMaintenanceItem);
@@ -208,7 +198,6 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
     void resetPassword_Success() throws Exception {
         Map<String, String> request = new HashMap<>();
         request.put("phone", "13800138000");
