@@ -1,7 +1,7 @@
 package org.example.motify.Controller;
 
 import org.example.motify.Entity.Car;
-import org.example.motify.Entity.MaintenanceRecord;
+import org.example.motify.Entity.MaintenanceItem;
 import org.example.motify.Entity.User;
 import org.example.motify.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/todo/users")
+@RequestMapping("/api/auth/users")
 public class UserController {
     @Autowired
     private UserService userService;
@@ -121,8 +121,8 @@ public class UserController {
      * 获取用户维修记录
      */
     @GetMapping("/{userId}/maintenance-records")
-    public Map<String, Object> getUserMaintenanceRecords(@PathVariable Long userId) {
-        List<MaintenanceRecord> records = userService.getUserMaintenanceRecords(userId);
+    public Map<String, Object> getUserMaintenanceItems(@PathVariable Long userId) {
+        List<MaintenanceItem> records = userService.getUserMaintenanceItems(userId);
         Map<String, Object> resp = new HashMap<>();
         resp.put("code", 200);
         resp.put("message", "success");
@@ -137,9 +137,9 @@ public class UserController {
     public Map<String, Object> submitRepairRequest(@PathVariable Long userId, @RequestBody Map<String, Object> req) {
         Long carId = Long.valueOf(req.get("carId").toString());
         String description = req.get("description").toString();
-        MaintenanceRecord result = userService.submitRepairRequest(userId, carId, description);
+        MaintenanceItem result = userService.submitRepairRequest(userId, carId, description);
         Map<String, Object> data = new HashMap<>();
-        data.put("recordId", result.getRecordId());
+        data.put("recordId", result.getItemId());
         data.put("description", result.getDescription());
         data.put("status", result.getStatus().name());
         data.put("progress", result.getProgress());

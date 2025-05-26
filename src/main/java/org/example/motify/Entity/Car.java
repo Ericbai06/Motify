@@ -26,6 +26,6 @@ public class Car {
     private User user;
 
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL)
-    private List<MaintenanceRecord> maintenanceRecords;
+    private List<MaintenanceItem> MaintenanceItems;
 
 }

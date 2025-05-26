@@ -18,7 +18,6 @@ public class MaterialPrice {
     @Column(nullable = false)
     private LocalDateTime updateTime;  // 价格更新时间
 
-    @OneToOne
-    @JoinColumn(name = "material_id", nullable = false)
+    @OneToOne(mappedBy = "materialPrice")
     private Material material;  // 关联的材料
 } 

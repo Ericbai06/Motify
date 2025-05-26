@@ -3,11 +3,11 @@ package org.example.motify.Service;
 import org.example.motify.Entity.*;
 import org.example.motify.Enum.MaintenanceStatus;
 import org.example.motify.Repository.*;
-import org.example.motify.util.PasswordEncoder;
 import org.example.motify.Exception.ResourceNotFoundException;
 import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +25,7 @@ public class UserService {
     private CarRepository carRepository;
     
     @Autowired
-    private MaintenanceRecordRepository maintenanceRecordRepository;
+    private MaintenanceItemRepository MaintenanceItemRepository;
     
     @Autowired
     private RepairmanRepository repairmanRepository;
@@ -178,14 +178,14 @@ public class UserService {
      * @throws ResourceNotFoundException 当用户不存在时
      */
     @Transactional(readOnly = true)
-    public List<MaintenanceRecord> getUserMaintenanceRecords(Long userId) {
+    public List<MaintenanceItem> getUserMaintenanceItems(Long userId) {
         // 验证用户是否存在
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("User", "id", userId);
         }
         
         // 通过Repository查询该用户的所有维修记录
-        return maintenanceRecordRepository.findByCar_User_UserId(userId);
+        return MaintenanceItemRepository.findByCar_User_UserId(userId);
     }
 
     /**
@@ -198,7 +198,7 @@ public class UserService {
      * @throws ResourceNotFoundException 当用户或车辆不存在时
      * @throws BadRequestException 当车辆不属于用户或描述为空时
      */
-    public MaintenanceRecord submitRepairRequest(Long userId, Long carId, String description) {
+    public MaintenanceItem submitRepairRequest(Long userId, Long carId, String description) {
         // 验证用户和车辆
         User user = getUserById(userId);
         Car car = carRepository.findById(carId)
@@ -215,16 +215,16 @@ public class UserService {
         }
         
         // 创建维修记录
-        MaintenanceRecord record = new MaintenanceRecord();
+        MaintenanceItem record = new MaintenanceItem();
         record.setCar(car);
         record.setDescription(description);
         record.setStatus(MaintenanceStatus.PENDING); // 使用枚举类型设置待处理状态
         record.setProgress(0); // 初始进度
-        record.setRepairman(new java.util.ArrayList<>()); // 初始化维修人员列表
+        record.setRepairmen(new java.util.ArrayList<>()); // 初始化维修人员列表
         
         // 创建记录信息
         RecordInfo recordInfo = new RecordInfo();
-        recordInfo.setMaintenanceRecord(record);
+        recordInfo.setMaintenanceItem(record);
         record.setRecordInfo(recordInfo);
         // 随机分配维修人员
         List<Repairman> availableRepairmen = repairmanRepository.findAll();
@@ -234,9 +234,9 @@ public class UserService {
         
         // 随机选择一个维修人员
         int randomIndex = (int) (Math.random() * availableRepairmen.size());
-        record.getRepairman().add(availableRepairmen.get(randomIndex));
+        record.getRepairmen().add(availableRepairmen.get(randomIndex));
         
-        return maintenanceRecordRepository.save(record);
+        return MaintenanceItemRepository.save(record);
     }
 
     /**

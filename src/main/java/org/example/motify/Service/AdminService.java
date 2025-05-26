@@ -19,7 +19,7 @@ public class AdminService {
     private CarRepository carRepository;
     
     @Autowired
-    private MaintenanceRecordRepository maintenanceRecordRepository;
+    private MaintenanceItemRepository MaintenanceItemRepository;
     
     @Autowired
     private MaterialRepository materialRepository;

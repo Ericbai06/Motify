@@ -1,4 +1,4 @@
-package org.example.motify.Entity;
+package org.example.motify.Enum;
 
 import lombok.Getter;
 

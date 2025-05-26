@@ -2,11 +2,11 @@ package org.example.motify.Service;
 
 import org.example.motify.Entity.*;
 import org.example.motify.Repository.*;
-import org.example.motify.util.PasswordEncoder;
 import org.example.motify.Exception.ResourceNotFoundException;
 import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +20,7 @@ public class RepairmanService {
     private RepairmanRepository repairmanRepository;
     
     @Autowired
-    private MaintenanceRecordRepository maintenanceRecordRepository;
+    private MaintenanceItemRepository MaintenanceItemRepository;
 
     private final MaterialRepository materialRepository;
     private final PasswordEncoder passwordEncoder;
@@ -83,18 +83,18 @@ public class RepairmanService {
     }
 
     @Transactional(readOnly = true)
-    public List<MaintenanceRecord> getRepairmanMaintenanceRecords(Long repairmanId) {
+    public List<MaintenanceItem> getRepairmanMaintenanceItems(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        return repairman.getMaintenanceRecords();
+        return repairman.getMaintenanceItems();
     }
 
-    public MaintenanceRecord updateMaintenanceRecord(Long recordId, MaintenanceRecord record) {
+    public MaintenanceItem updateMaintenanceItem(Long recordId, MaintenanceItem record) {
         if (recordId == null) {
             throw new BadRequestException("维修记录ID不能为空");
         }
-        MaintenanceRecord existingRecord = maintenanceRecordRepository.findById(recordId)
-                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceRecord", "id", recordId));
+        MaintenanceItem existingRecord = MaintenanceItemRepository.findById(recordId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", recordId));
         
         // 更新维修进度
         if (record.getProgress() != null) {
@@ -114,36 +114,36 @@ public class RepairmanService {
             existingRecord.setReminder(record.getReminder());
         }
         
-        return maintenanceRecordRepository.save(existingRecord);
+        return MaintenanceItemRepository.save(existingRecord);
     }
 
-    public MaintenanceRecord saveMaintenanceRecord(MaintenanceRecord record) {
+    public MaintenanceItem saveMaintenanceItem(MaintenanceItem record) {
         if (record.getCar() == null || record.getCar().getCarId() == null) {
             throw new BadRequestException("车辆信息不能为空");
         }
-        if (record.getRepairman() == null || record.getRepairman().isEmpty()) {
+        if (record.getRepairmen() == null || record.getRepairmen().isEmpty()) {
             throw new BadRequestException("维修人员不能为空");
         }
         if (record.getProgress() < 0 || record.getProgress() > 100) {
             throw new BadRequestException("维修进度必须在0-100之间");
         }
-        return maintenanceRecordRepository.save(record);
+        return MaintenanceItemRepository.save(record);
     }
 
     @Transactional(readOnly = true)
-    public List<MaintenanceRecord> getRepairmanCurrentRecords(Long repairmanId) {
+    public List<MaintenanceItem> getRepairmanCurrentRecords(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        return repairman.getMaintenanceRecords().stream()
+        return repairman.getMaintenanceItems().stream()
                 .filter(record -> record.getProgress() < 100)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<MaintenanceRecord> getRepairmanCompletedRecords(Long repairmanId) {
+    public List<MaintenanceItem> getRepairmanCompletedRecords(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        return repairman.getMaintenanceRecords().stream()
+        return repairman.getMaintenanceItems().stream()
                 .filter(record -> record.getProgress() == 100)
                 .toList();
     }
@@ -152,31 +152,31 @@ public class RepairmanService {
     public double calculateTotalIncome(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        return repairman.getMaintenanceRecords().stream()
+        return repairman.getMaintenanceItems().stream()
                 .filter(record -> record.getProgress() == 100)
                 .mapToDouble(record -> record.getRecordInfo().getTotalAmount())
                 .sum();
     }
 
-    public MaintenanceRecord acceptMaintenanceRecord(Long repairmanId, Long recordId) {
+    public MaintenanceItem acceptMaintenanceItem(Long repairmanId, Long recordId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new RuntimeException("维修人员不存在"));
         
-        MaintenanceRecord record = maintenanceRecordRepository.findById(recordId)
+        MaintenanceItem record = MaintenanceItemRepository.findById(recordId)
                 .orElseThrow(() -> new RuntimeException("维修记录不存在"));
         
         // 更新维修记录状态
         record.setProgress(10); // 开始维修，设置初始进度
-        record.getRepairman().add(repairman);
+        record.getRepairmen().add(repairman);
         
         // 更新记录信息
         if (record.getRecordInfo() == null) {
             RecordInfo recordInfo = new RecordInfo();
-            recordInfo.setMaintenanceRecord(record);
+            recordInfo.setMaintenanceItem(record);
             record.setRecordInfo(recordInfo);
         }
         record.getRecordInfo().setUpdateTime(java.time.LocalDateTime.now());
         
-        return maintenanceRecordRepository.save(record);
+        return MaintenanceItemRepository.save(record);
     }
 } 
