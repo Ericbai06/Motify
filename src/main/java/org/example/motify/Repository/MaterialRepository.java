@@ -19,15 +19,13 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     @Query("SELECT m FROM Material m WHERE m.stock BETWEEN :minStock AND :maxStock")
     List<Material> findByStockRange(@Param("minStock") Integer minStock, @Param("maxStock") Integer maxStock);
     
-    // 根据维修项目ID查找材料
-    @Query("SELECT m FROM Material m WHERE m.maintenanceItem.itemId = :itemId")
-    List<Material> findByItemId(@Param("itemId") Long itemId);
-    
-    // 根据维修记录ID查找材料
-    @Query("SELECT m FROM Material m JOIN m.maintenanceRecords mr WHERE mr.recordId = :recordId")
+    // 根据维修记录ID查找材料（使用原生SQL查询）
+    @Query(value = "SELECT m.* FROM materials m " +
+            "JOIN record_material rm ON m.material_id = rm.material_id " +
+            "WHERE rm.record_id = :recordId", nativeQuery = true)
     List<Material> findByRecordId(@Param("recordId") Long recordId);
     
     // 查找特定价格范围的材料
-    @Query("SELECT m FROM Material m JOIN m.materialPrice mp WHERE mp.unitPrice BETWEEN :minPrice AND :maxPrice")
+    @Query("SELECT m FROM Material m WHERE m.price BETWEEN :minPrice AND :maxPrice")
     List<Material> findByPriceRange(@Param("minPrice") Double minPrice, @Param("maxPrice") Double maxPrice);
 } 

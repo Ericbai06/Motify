@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.time.LocalDateTime;
 
 @Service
 @Transactional
@@ -105,6 +107,51 @@ public class RepairmanService {
         if (record.getReminder() != null) {
             existingRecord.setReminder(record.getReminder());
         }
+
+        // 更新材料使用情况
+        if (record.getMaintenanceRecords() != null) {
+            for (MaintenanceRecord maintenanceRecord : record.getMaintenanceRecords()) {
+                if (maintenanceRecord.getMaterialAmounts() != null) {
+                    for (Map.Entry<Material, Integer> entry : maintenanceRecord.getMaterialAmounts().entrySet()) {
+                        Material material = entry.getKey();
+                        Integer amount = entry.getValue();
+                        
+                        // 检查库存
+                        if (material.getStock() < amount) {
+                            throw new BadRequestException("材料 " + material.getName() + " 库存不足");
+                        }
+                        
+                        // 更新库存
+                        material.setStock(material.getStock() - amount);
+                        materialRepository.save(material);
+                    }
+                }
+            }
+        }
+
+        // 更新费用信息
+        RecordInfo recordInfo = new RecordInfo();
+        recordInfo.setMaintenanceItem(existingRecord);
+        
+        // 计算材料费用
+        double materialCost = record.getMaintenanceRecords().stream()
+                .mapToDouble(MaintenanceRecord::calculateMaterialCost)
+                .sum();
+        recordInfo.setMaterialCost(materialCost);
+
+        // 计算工时费用
+        double laborCost = record.getRepairmen().stream()
+                .mapToDouble(repairman -> repairman.getHourlyRate() * record.getWorkHours())
+                .sum();
+        recordInfo.setLaborCost(laborCost);
+        
+        recordInfo.setUpdateTime(LocalDateTime.now());
+        
+        // 添加到记录信息列表
+        if (existingRecord.getRecordInfos() == null) {
+            existingRecord.setRecordInfos(new java.util.ArrayList<>());
+        }
+        existingRecord.getRecordInfos().add(recordInfo);
         
         return maintenanceItemRepository.save(existingRecord);
     }
@@ -146,7 +193,9 @@ public class RepairmanService {
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
         return repairman.getMaintenanceItems().stream()
                 .filter(record -> record.getProgress() == 100)
-                .mapToDouble(record -> record.getRecordInfo().getTotalAmount())
+                .mapToDouble(record -> record.getRecordInfos().stream()
+                        .mapToDouble(RecordInfo::getTotalAmount)
+                        .sum())
                 .sum();
     }
 
@@ -162,13 +211,25 @@ public class RepairmanService {
         record.getRepairmen().add(repairman);
         
         // 更新记录信息
-        if (record.getRecordInfo() == null) {
-            RecordInfo recordInfo = new RecordInfo();
-            recordInfo.setMaintenanceItem(record);
-            record.setRecordInfo(recordInfo);
+        RecordInfo recordInfo = new RecordInfo();
+        recordInfo.setMaintenanceItem(record);
+        recordInfo.setUpdateTime(LocalDateTime.now());
+        
+        if (record.getRecordInfos() == null) {
+            record.setRecordInfos(new java.util.ArrayList<>());
         }
-        record.getRecordInfo().setUpdateTime(java.time.LocalDateTime.now());
+        record.getRecordInfos().add(recordInfo);
         
         return maintenanceItemRepository.save(record);
+    }
+
+    // 以维修记录为例，统计材料费用
+    public double calculateMaterialCost(MaintenanceRecord record) {
+        if (record.getMaterialAmounts() == null || record.getMaterialAmounts().isEmpty()) {
+            return 0.0;
+        }
+        return record.getMaterialAmounts().entrySet().stream()
+                .mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue())
+                .sum();
     }
 } 

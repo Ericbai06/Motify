@@ -3,11 +3,15 @@ package org.example.motify.Entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
+import java.util.Map;
 import org.example.motify.Enum.MaintenanceStatus;
+import org.example.motify.trigger.MaintenanceItemTrigger;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
 @Table(name = "maintenance_items")
+@EntityListeners(MaintenanceItemTrigger.class)
 public class MaintenanceItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,7 +27,7 @@ public class MaintenanceItem {
     @Enumerated(EnumType.STRING)
     private MaintenanceStatus status;  // 维修状态
 
-    @Column(nullable = false)
+    @Column
     private Integer progress;  // 维修进度
 
     @Column
@@ -38,12 +42,15 @@ public class MaintenanceItem {
     @Column(nullable = false)
     private Double cost;  // 维修总成本
 
+    @Column
+    private Double workHours;  // 工作时长
+
     @ManyToOne
     @JoinColumn(name = "car_id", nullable = false)
     private Car car;
 
-    @OneToOne(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
-    private RecordInfo recordInfo;
+    @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
+    private List<RecordInfo> recordInfos;
 
     @ManyToMany
     @JoinTable(
@@ -55,7 +62,4 @@ public class MaintenanceItem {
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
     private List<MaintenanceRecord> maintenanceRecords;
-
-    @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
-    private List<Material> materials;
 }

@@ -2,6 +2,7 @@ package org.example.motify.Entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import java.util.List;
 
 @Data
 @Entity
@@ -20,6 +21,6 @@ public class Salary {
     @Column(nullable = false)
     private Float hourlyWage;  // 小时工资
 
-    @OneToOne(mappedBy = "salary")
-    private Repairman repairman;  // 关联的维修人员
+    @OneToMany(mappedBy = "salary")
+    private List<Repairman> repairmen;  // 关联的维修人员
 } 

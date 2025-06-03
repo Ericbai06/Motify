@@ -24,7 +24,21 @@ public class RecordInfo {
     @Column(nullable = false)
     private Double totalAmount;  // 总金额
 
-    @OneToOne
-    @JoinColumn(name = "item_id")
+    @Column
+    private Double materialCost;  // 材料费用
+
+    @Column
+    private Double laborCost;  // 工时费用
+
+    @ManyToOne
+    @JoinColumn(name = "item_id", unique = false)
     private MaintenanceItem maintenanceItem;
+
+    // 更新总金额
+    @PrePersist
+    @PreUpdate
+    public void updateTotalAmount() {
+        this.totalAmount = (materialCost != null ? materialCost : 0.0) + 
+                          (laborCost != null ? laborCost : 0.0);
+    }
 } 

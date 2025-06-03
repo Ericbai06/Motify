@@ -11,6 +11,7 @@ import org.example.motify.util.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Optional;
@@ -223,7 +224,13 @@ public class UserService {
         // 创建记录信息
         RecordInfo recordInfo = new RecordInfo();
         recordInfo.setMaintenanceItem(record);
-        record.setRecordInfo(recordInfo);
+        recordInfo.setCreateTime(LocalDateTime.now());
+        
+        if (record.getRecordInfos() == null) {
+            record.setRecordInfos(new java.util.ArrayList<>());
+        }
+        record.getRecordInfos().add(recordInfo);
+        
         // 随机分配维修人员
         List<Repairman> availableRepairmen = repairmanRepository.findAll();
         if (availableRepairmen.isEmpty()) {

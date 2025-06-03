@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -153,7 +154,10 @@ class RepairmanServiceTest {
         lenient().when(repairmanRepository.findById(anyLong())).thenReturn(Optional.of(testRepairman));
         org.example.motify.Entity.RecordInfo recordInfo = new org.example.motify.Entity.RecordInfo();
         recordInfo.setTotalAmount(100.0);
-        testMaintenanceItem.setRecordInfo(recordInfo);
+        if (testMaintenanceItem.getRecordInfos() == null) {
+            testMaintenanceItem.setRecordInfos(new ArrayList<>());
+        }
+        testMaintenanceItem.getRecordInfos().add(recordInfo);
         testMaintenanceItem.setProgress(100);
         double totalIncome = repairmanService.calculateTotalIncome(1L);
         assertEquals(100.0, totalIncome);
@@ -167,7 +171,10 @@ class RepairmanServiceTest {
         testMaintenanceItem.setRepairmen(new java.util.ArrayList<>());
         org.example.motify.Entity.RecordInfo recordInfo = new org.example.motify.Entity.RecordInfo();
         recordInfo.setTotalAmount(100.0);
-        testMaintenanceItem.setRecordInfo(recordInfo);
+        if (testMaintenanceItem.getRecordInfos() == null) {
+            testMaintenanceItem.setRecordInfos(new ArrayList<>());
+        }
+        testMaintenanceItem.getRecordInfos().add(recordInfo);
         MaintenanceItem result = repairmanService.acceptMaintenanceItem(1L, 1L);
         assertNotNull(result);
         assertEquals(10, result.getProgress());

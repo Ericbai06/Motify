@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/repairmen")
@@ -151,4 +152,11 @@ public class RepairmanController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    // 示例：获取工单材料及用量
+    // @GetMapping("/maintenance-items/{itemId}/materials")
+    // public Map<Material, Integer> getMaterialsWithAmount(@PathVariable Long itemId) {
+    //     MaintenanceItem item = maintenanceItemRepository.findById(itemId).orElseThrow(...);
+    //     return item.getMaterials();
+    // }
 } 

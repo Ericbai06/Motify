@@ -143,7 +143,9 @@ public class UserController {
         data.put("description", result.getDescription());
         data.put("status", result.getStatus().name());
         data.put("progress", result.getProgress());
-        data.put("createTime", result.getRecordInfo() != null ? result.getRecordInfo().getCreateTime() : null);
+        data.put("createTime", result.getRecordInfos() != null && !result.getRecordInfos().isEmpty() 
+            ? result.getRecordInfos().get(0).getCreateTime() 
+            : null);
         Map<String, Object> car = new HashMap<>();
         car.put("carId", result.getCar().getCarId());
         car.put("brand", result.getCar().getBrand());

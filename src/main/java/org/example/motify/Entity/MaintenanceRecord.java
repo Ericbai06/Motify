@@ -3,6 +3,7 @@ package org.example.motify.Entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Entity
@@ -25,11 +26,29 @@ public class MaintenanceRecord {
     @JoinColumn(name = "item_id", nullable = false)
     private MaintenanceItem maintenanceItem;
 
-    @ManyToMany
-    @JoinTable(
+    @ElementCollection
+    @CollectionTable(
         name = "record_material",
-        joinColumns = @JoinColumn(name = "record_id"),
-        inverseJoinColumns = @JoinColumn(name = "material_id")
+        joinColumns = @JoinColumn(name = "record_id")
     )
-    private List<Material> materials;
+    @MapKeyJoinColumn(name = "material_id")
+    @Column(name = "amount")
+    private Map<Material, Integer> materialAmounts;  // 材料及其使用数量
+
+    // 计算材料总费用
+    public Double calculateMaterialCost() {
+        if (materialAmounts == null || materialAmounts.isEmpty()) {
+            return 0.0;
+        }
+        return materialAmounts.entrySet().stream()
+                .mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue())
+                .sum();
+    }
+
+    // 更新总费用
+    @PrePersist
+    @PreUpdate
+    public void updateCost() {
+        this.cost = calculateMaterialCost();
+    }
 }

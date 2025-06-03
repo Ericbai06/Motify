@@ -36,10 +36,15 @@ public class Repairman {
     @Column(nullable = false, insertable = false, updatable = false)
     private String type;  // 工资类型
 
-    @OneToOne
-    @JoinColumn(name = "type", referencedColumnName = "type")
+    @ManyToOne
+    @JoinColumn(name = "salary_id")
     private Salary salary;  // 工资信息
 
     @ManyToMany(mappedBy = "repairmen")
     private List<MaintenanceItem> maintenanceItems;  // 维修项目
+
+    // 获取时薪
+    public Double getHourlyRate() {
+        return salary != null ? salary.getHourlyRate().doubleValue() : 0.0;
+    }
 } 
