@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class Admin {
     // Getters and Setters
-    @Id
+    @Id //主键标识
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long adminId;
 
@@ -28,10 +28,14 @@ public class Admin {
     @Column(nullable = false)
     private LocalDateTime lastLoginTime;
 
-    @Column(nullable = false)
-    private boolean isActive = true;
+    @Column(name = "is_active", nullable = false)
+    private Boolean active = true;  
 
     // 构造函数
     public Admin() {}
+
+    public boolean isActive() {
+        return active != null && active;
+    }
 
 }
