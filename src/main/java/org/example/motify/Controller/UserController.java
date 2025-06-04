@@ -132,33 +132,45 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
     }
 
     /**
+     * 获取用户当前正在进行的维修项目
+     */
+    @GetMapping("/{userId}/maintenance-records/current")
+    public Map<String, Object> getUserCurrentMaintenanceItems(@PathVariable Long userId) {
+        List<MaintenanceItem> currentRecords = userService.getUserCurrentMaintenanceItems(userId);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "success");
+        resp.put("data", currentRecords);
+        return resp;
+    }
+
+    /**
      * 提交维修请求
      */
     @PostMapping("/{userId}/maintenance-records")
     public Map<String, Object> submitRepairRequest(@PathVariable Long userId, @RequestBody Map<String, Object> req) {
         Long carId = Long.valueOf(req.get("carId").toString());
-        String description = req.get("description").toString();
-        MaintenanceItem result = userService.submitRepairRequest(userId, carId, description);
+        String name = (String) req.get("name");
+        String description = (String) req.get("description");
+        
+        MaintenanceItem result = userService.submitRepairRequest(userId, carId, name, description);
+        
         Map<String, Object> data = new HashMap<>();
-        data.put("recordId", result.getItemId());
+        data.put("itemId", result.getItemId());
+        data.put("name", result.getName());
         data.put("description", result.getDescription());
-        data.put("status", result.getStatus().name());
+        data.put("status", result.getStatus());
         data.put("progress", result.getProgress());
-        data.put("createTime", result.getRecordInfos() != null && !result.getRecordInfos().isEmpty() 
-            ? result.getRecordInfos().get(0).getCreateTime() 
-            : null);
-        Map<String, Object> car = new HashMap<>();
-        car.put("carId", result.getCar().getCarId());
-        car.put("brand", result.getCar().getBrand());
-        car.put("model", result.getCar().getModel());
-        car.put("licensePlate", result.getCar().getLicensePlate());
-        data.put("car", car);
+        data.put("createTime", result.getCreateTime());
+        data.put("cost", result.getCost());
+        
         Map<String, Object> resp = new HashMap<>();
         resp.put("code", 200);
-        resp.put("message", "success");
+        resp.put("message", "维修请求提交成功");
         resp.put("data", data);
         return resp;
     }
+    
 
     /**
      * 重置密码
@@ -175,4 +187,93 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
         resp.put("data", null);
         return resp;
     }
-} 
+
+    /**
+     * 提交催单请求
+     */
+    @PostMapping("/{userId}/maintenance-records/{itemId}/rush-order")
+    public Map<String, Object> submitRushOrder(@PathVariable Long userId, 
+                                               @PathVariable Long itemId, 
+                                               @RequestBody Map<String, String> req) {
+        String reminderMessage = req.get("reminderMessage");
+        
+        MaintenanceItem result = userService.submitRushOrder(userId, itemId, reminderMessage);
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("itemId", result.getItemId());
+        data.put("name", result.getName());
+        data.put("status", result.getStatus());
+        data.put("reminder", result.getReminder());
+        data.put("updateTime", result.getUpdateTime());
+        
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "催单提交成功");
+        resp.put("data", data);
+        return resp;
+    }
+
+    /**
+     * 提交服务评分
+     */
+    @PostMapping("/{userId}/maintenance-records/{itemId}/rating")
+    public Map<String, Object> submitServiceRating(@PathVariable Long userId, 
+                                                   @PathVariable Long itemId, 
+                                                   @RequestBody Map<String, Integer> req) {
+        Integer score = req.get("score");
+        
+        MaintenanceItem result = userService.submitServiceRating(userId, itemId, score);
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("itemId", result.getItemId());
+        data.put("name", result.getName());
+        data.put("status", result.getStatus());
+        data.put("score", result.getScore());
+        data.put("updateTime", result.getUpdateTime());
+        
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "评分提交成功");
+        resp.put("data", data);
+        return resp;
+    }
+
+    /**
+     * 获取维修项目详情
+     */
+    @GetMapping("/{userId}/maintenance-records/{itemId}")
+    public Map<String, Object> getMaintenanceItemDetail(@PathVariable Long userId, 
+                                                        @PathVariable Long itemId) {
+        MaintenanceItem result = userService.getMaintenanceItemDetail(userId, itemId);
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("itemId", result.getItemId());
+        data.put("name", result.getName());
+        data.put("description", result.getDescription());
+        data.put("status", result.getStatus());
+        data.put("progress", result.getProgress());
+        data.put("result", result.getResult());
+        data.put("reminder", result.getReminder());
+        data.put("score", result.getScore());
+        data.put("createTime", result.getCreateTime());
+        data.put("updateTime", result.getUpdateTime());
+        data.put("completeTime", result.getCompleteTime());
+        data.put("cost", result.getCost());
+        data.put("materialCost", result.getMaterialCost());
+        data.put("laborCost", result.getLaborCost());
+        
+        // 添加车辆信息
+        Map<String, Object> carInfo = new HashMap<>();
+        carInfo.put("carId", result.getCar().getCarId());
+        carInfo.put("brand", result.getCar().getBrand());
+        carInfo.put("model", result.getCar().getModel());
+        carInfo.put("licensePlate", result.getCar().getLicensePlate());
+        data.put("car", carInfo);
+        
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "success");
+        resp.put("data", data);
+        return resp;
+    }
+}

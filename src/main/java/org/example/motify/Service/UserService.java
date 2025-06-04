@@ -34,6 +34,7 @@ public class UserService {
     @Autowired
     private final RepairmanRepository repairmanRepository;
 
+    //用户注册
     public User register(User user) {
         // 参数验证
         if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
@@ -217,56 +218,55 @@ public List<Map<String, Object>> getUserCarsSafe(Long userId) {
      * 
      * @param userId 用户ID
      * @param carId 车辆ID
+     * @param name 维修项目名称
      * @param description 维修描述
-     * @return 创建的维修记录
+     * @return 创建的维修项目
      * @throws ResourceNotFoundException 当用户或车辆不存在时
-     * @throws BadRequestException 当车辆不属于用户或描述为空时
+     * @throws BadRequestException 当车辆不属于该用户时
      */
-    public MaintenanceItem submitRepairRequest(Long userId, Long carId, String description) {
-        // 验证用户和车辆
-        User user = getUserById(userId);
+    public MaintenanceItem submitRepairRequest(Long userId, Long carId, String name, String description) {
+        // 验证参数
+        if (name == null || name.trim().isEmpty()) {
+            throw new BadRequestException("维修项目名称不能为空");
+        }
+        if (description == null || description.trim().isEmpty()) {
+            throw new BadRequestException("维修描述不能为空");
+        }
+        
+        // 验证用户是否存在
+        getUserById(userId);
+        
+        // 验证车辆是否存在
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", carId));
         
         // 验证车辆是否属于该用户
         if (!car.getUser().getUserId().equals(userId)) {
-            throw new BadRequestException("该车辆不属于当前用户");
+            throw new BadRequestException("无权限操作该车辆");
         }
         
-        // 验证描述
-        if (description == null || description.trim().isEmpty()) {
-            throw new BadRequestException("维修描述不能为空");
-        }
+        // 创建维修项目
+        MaintenanceItem maintenanceItem = new MaintenanceItem();
+        maintenanceItem.setName(name.trim());
+        maintenanceItem.setDescription(description.trim());
+        maintenanceItem.setStatus(MaintenanceStatus.PENDING);
+        maintenanceItem.setProgress(0);
+        maintenanceItem.setCost(0.0);
+        maintenanceItem.setMaterialCost(0.0);
+        maintenanceItem.setLaborCost(0.0);
+        maintenanceItem.setCreateTime(LocalDateTime.now());
+        maintenanceItem.setCar(car);
         
-        // 创建维修记录
-        MaintenanceItem record = new MaintenanceItem();
-        record.setCar(car);
-        record.setDescription(description);
-        record.setStatus(MaintenanceStatus.PENDING); // 使用枚举类型设置待处理状态
-        record.setProgress(0); // 初始进度
-        record.setRepairmen(new java.util.ArrayList<>()); // 初始化维修人员列表
-        
-        // 创建记录信息
-        RecordInfo recordInfo = new RecordInfo();
-        recordInfo.setMaintenanceItem(record);
-        recordInfo.setCreateTime(LocalDateTime.now());
-        
-        if (record.getRecordInfos() == null) {
-            record.setRecordInfos(new java.util.ArrayList<>());
-        }
-        record.getRecordInfos().add(recordInfo);
-        
-        // 随机分配维修人员
+        // 自动分配维修人员（简单策略：分配第一个可用的维修人员）
         List<Repairman> availableRepairmen = repairmanRepository.findAll();
-        if (availableRepairmen.isEmpty()) {
-            throw new BadRequestException("当前没有可用的维修人员");
+        if (!availableRepairmen.isEmpty()) {
+            // 为简化实现，这里只分配第一个维修人员
+            // 在实际应用中，可以根据维修类型、负载均衡等因素来选择
+            maintenanceItem.setRepairmen(List.of(availableRepairmen.get(0)));
         }
         
-        // 随机选择一个维修人员
-        int randomIndex = (int) (Math.random() * availableRepairmen.size());
-        record.getRepairmen().add(availableRepairmen.get(randomIndex));
-        
-        return maintenanceItemRepository.save(record);
+        // 保存维修项目
+        return maintenanceItemRepository.save(maintenanceItem);
     }
 
     /**
@@ -296,6 +296,143 @@ public List<Map<String, Object>> getUserCarsSafe(Long userId) {
         // 更新密码
         user.setPassword(PasswordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    /**
+     * 提交催单请求
+     * 
+     * @param userId 用户ID
+     * @param itemId 维修项目ID
+     * @param reminderMessage 催单信息
+     * @return 更新后的维修项目
+     * @throws ResourceNotFoundException 当用户或维修项目不存在时
+     * @throws BadRequestException 当维修项目不属于该用户或状态不允许催单时
+     */
+    public MaintenanceItem submitRushOrder(Long userId, Long itemId, String reminderMessage) {
+        // 验证参数
+        if (reminderMessage == null || reminderMessage.trim().isEmpty()) {
+            throw new BadRequestException("催单信息不能为空");
+        }
+        
+        // 验证用户是否存在
+        getUserById(userId);
+        
+        // 验证维修项目是否存在
+        MaintenanceItem maintenanceItem = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        
+        // 验证维修项目是否属于该用户
+        if (!maintenanceItem.getCar().getUser().getUserId().equals(userId)) {
+            throw new BadRequestException("无权限操作该维修项目");
+        }
+        
+        // 检查维修状态是否允许催单（只有进行中和待处理状态可以催单）
+        if (maintenanceItem.getStatus() == MaintenanceStatus.COMPLETED || 
+            maintenanceItem.getStatus() == MaintenanceStatus.CANCELLED) {
+            throw new BadRequestException("该维修项目已完成或已取消，无法催单");
+        }
+        
+        // 更新催单信息
+        maintenanceItem.setReminder(reminderMessage.trim());
+        maintenanceItem.setUpdateTime(LocalDateTime.now());
+        
+        // 保存更新
+        return maintenanceItemRepository.save(maintenanceItem);
+    }
+
+    /**
+     * 提交服务评分
+     * 
+     * @param userId 用户ID
+     * @param itemId 维修项目ID
+     * @param score 评分（1-5分）
+     * @return 更新后的维修项目
+     * @throws ResourceNotFoundException 当用户或维修项目不存在时
+     * @throws BadRequestException 当维修项目不属于该用户、状态不允许评分或评分无效时
+     */
+    public MaintenanceItem submitServiceRating(Long userId, Long itemId, Integer score) {
+        // 验证参数
+        if (score == null || score < 1 || score > 5) {
+            throw new BadRequestException("评分必须在1-5分之间");
+        }
+        
+        // 验证用户是否存在
+        getUserById(userId);
+        
+        // 验证维修项目是否存在
+        MaintenanceItem maintenanceItem = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        
+        // 验证维修项目是否属于该用户
+        if (!maintenanceItem.getCar().getUser().getUserId().equals(userId)) {
+            throw new BadRequestException("无权限操作该维修项目");
+        }
+        
+        // 检查维修状态是否允许评分（只有已完成状态可以评分）
+        if (maintenanceItem.getStatus() != MaintenanceStatus.COMPLETED) {
+            throw new BadRequestException("只有已完成的维修项目才能评分");
+        }
+        
+        // 检查是否已经评分
+        if (maintenanceItem.getScore() != null) {
+            throw new BadRequestException("该维修项目已经评分，无法重复评分");
+        }
+        
+        // 更新评分
+        maintenanceItem.setScore(score);
+        maintenanceItem.setUpdateTime(LocalDateTime.now());
+        
+        // 保存更新
+        return maintenanceItemRepository.save(maintenanceItem);
+    }
+
+    /**
+     * 获取维修项目详情（包含催单和评分信息）
+     * 
+     * @param userId 用户ID
+     * @param itemId 维修项目ID
+     * @return 维修项目详情
+     * @throws ResourceNotFoundException 当用户或维修项目不存在时
+     * @throws BadRequestException 当维修项目不属于该用户时
+     */
+    @Transactional(readOnly = true)
+    public MaintenanceItem getMaintenanceItemDetail(Long userId, Long itemId) {
+        // 验证用户是否存在
+        getUserById(userId);
+        
+        // 验证维修项目是否存在
+        MaintenanceItem maintenanceItem = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        
+        // 验证维修项目是否属于该用户
+        if (!maintenanceItem.getCar().getUser().getUserId().equals(userId)) {
+            throw new BadRequestException("无权限查看该维修项目");
+        }
+        
+        return maintenanceItem;
+    }
+
+    /**
+     * 获取用户当前正在进行的维修项目
+     * 
+     * @param userId 用户ID
+     * @return 用户当前正在进行的维修项目列表
+     * @throws ResourceNotFoundException 当用户不存在时
+     */
+    @Transactional(readOnly = true)
+    public List<MaintenanceItem> getUserCurrentMaintenanceItems(Long userId) {
+        // 验证用户是否存在
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User", "id", userId);
+        }
+        
+        // 获取用户所有维修记录
+        List<MaintenanceItem> allItems = maintenanceItemRepository.findByCar_User_UserId(userId);
+        
+        // 过滤出正在进行的维修项目
+        return allItems.stream()
+                .filter(item -> item.getStatus() == MaintenanceStatus.IN_PROGRESS)
+                .collect(Collectors.toList());
     }
 
 }

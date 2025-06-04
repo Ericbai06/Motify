@@ -79,20 +79,20 @@ public class RepairmanController {
         }
     }
 
-    // 更新维修项目
-    @PutMapping("/maintenance-items/{recordId}")
-    public ResponseEntity<MaintenanceItem> updateMaintenanceItem(
-            @PathVariable Long recordId,
-            @RequestBody MaintenanceItem record) {
-        try {
-            MaintenanceItem updatedRecord = repairmanService.updateMaintenanceItem(recordId, record);
-            return ResponseEntity.ok(updatedRecord);
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (BadRequestException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
+    // // 更新维修项目
+    // @PutMapping("/maintenance-items/{recordId}")
+    // public ResponseEntity<MaintenanceItem> updateMaintenanceItem(
+    //         @PathVariable Long recordId,
+    //         @RequestBody MaintenanceItem record) {
+    //     try {
+    //         MaintenanceItem updatedRecord = repairmanService.updateMaintenanceItem(recordId, record);
+    //         return ResponseEntity.ok(updatedRecord);
+    //     } catch (ResourceNotFoundException e) {
+    //         return ResponseEntity.notFound().build();
+    //     } catch (BadRequestException e) {
+    //         return ResponseEntity.badRequest().build();
+    //     }
+    // }
 
     // 获取当前维修记录
     @GetMapping("/{repairmanId}/current-records")
@@ -116,31 +116,31 @@ public class RepairmanController {
         }
     }
 
-    // 计算总收入
-    @GetMapping("/{repairmanId}/total-income")
-    public ResponseEntity<Double> getTotalIncome(@PathVariable Long repairmanId) {
-        try {
-            double totalIncome = repairmanService.calculateTotalIncome(repairmanId);
-            return ResponseEntity.ok(totalIncome);
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
+    // // 计算总收入
+    // @GetMapping("/{repairmanId}/total-income")
+    // public ResponseEntity<Double> getTotalIncome(@PathVariable Long repairmanId) {
+    //     try {
+    //         double totalIncome = repairmanService.calculateTotalIncome(repairmanId);
+    //         return ResponseEntity.ok(totalIncome);
+    //     } catch (ResourceNotFoundException e) {
+    //         return ResponseEntity.notFound().build();
+    //     }
+    // }
 
-    // 接受维修项目
-    @PostMapping("/{repairmanId}/accept/{recordId}")
-    public ResponseEntity<MaintenanceItem> acceptMaintenanceItem(
-            @PathVariable Long repairmanId,
-            @PathVariable Long recordId) {
-        try {
-            MaintenanceItem record = repairmanService.acceptMaintenanceItem(repairmanId, recordId);
-            return ResponseEntity.ok(record);
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (BadRequestException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
+    // // 接受维修项目
+    // @PostMapping("/{repairmanId}/accept/{recordId}")
+    // public ResponseEntity<MaintenanceItem> acceptMaintenanceItem(
+    //         @PathVariable Long repairmanId,
+    //         @PathVariable Long recordId) {
+    //     try {
+    //         MaintenanceItem record = repairmanService.acceptMaintenanceItem(repairmanId, recordId);
+    //         return ResponseEntity.ok(record);
+    //     } catch (ResourceNotFoundException e) {
+    //         return ResponseEntity.notFound().build();
+    //     } catch (BadRequestException e) {
+    //         return ResponseEntity.badRequest().build();
+    //     }
+    // }
 
     // 保存维修项目
     @PostMapping("/maintenance-items")

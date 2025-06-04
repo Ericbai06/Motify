@@ -5,13 +5,11 @@ import lombok.Data;
 import java.util.List;
 import java.util.Map;
 import org.example.motify.Enum.MaintenanceStatus;
-import org.example.motify.trigger.MaintenanceItemTrigger;
 import java.time.LocalDateTime;
 
 @Data
 @Entity
 @Table(name = "maintenance_items")
-@EntityListeners(MaintenanceItemTrigger.class)
 public class MaintenanceItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,7 +32,7 @@ public class MaintenanceItem {
     private String result; // 维修结果
 
     @Column
-    private String reminder; // 提醒信息
+    private String reminder; // 催单信息
 
     @Column
     private Integer score; // 用户评分
