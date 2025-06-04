@@ -6,6 +6,7 @@ import org.example.motify.Exception.ResourceNotFoundException;
 import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
 import org.example.motify.util.PasswordEncoder;
+import org.example.motify.Enum.MaintenanceStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,12 @@ public class RepairmanService {
         if (repairman.getPassword() == null || repairman.getPassword().trim().isEmpty()) {
             throw new BadRequestException("密码不能为空");
         }
+        if (repairman.getName() == null || repairman.getName().trim().isEmpty()) {
+            throw new BadRequestException("姓名不能为空");
+        }
+        if (repairman.getGender() == null || repairman.getGender().trim().isEmpty()) {
+            throw new BadRequestException("性别不能为空");
+        }
         if (repairmanRepository.existsByUsername(repairman.getUsername())) {
             throw new BadRequestException("用户名已存在");
         }
@@ -46,16 +53,38 @@ public class RepairmanService {
     @Transactional(readOnly = true)
     public Optional<Repairman> login(String username, String password) {
         if (username == null || username.trim().isEmpty()) {
+            System.out.println("登录失败: 用户名为空");
             throw new BadRequestException("用户名不能为空");
         }
         if (password == null || password.trim().isEmpty()) {
+            System.out.println("登录失败: 密码为空");
             throw new BadRequestException("密码不能为空");
         }
-        return repairmanRepository.findByUsername(username)
-                .filter(repairman -> PasswordEncoder.matches(password, repairman.getPassword()))
-                .or(() -> {
-                    throw new AuthenticationException("用户名或密码错误");
-                });
+
+        // 先检查用户是否存在
+        Optional<Repairman> repairmanOpt = repairmanRepository.findByUsername(username);
+        if (repairmanOpt.isEmpty()) {
+            System.out.println("登录失败: 用户名 " + username + " 不存在");
+            throw new AuthenticationException("用户名或密码错误");
+        }
+
+        // 检查密码是否匹配
+        Repairman repairman = repairmanOpt.get();
+        String storedPassword = repairman.getPassword();
+        System.out.println("找到用户: " + username + ", 开始验证密码");
+
+        // 打印密码信息，便于调试（生产环境请移除这些敏感信息的打印）
+        System.out.println("输入的密码: " + password);
+        System.out.println("存储的加密密码: " + storedPassword);
+
+        boolean passwordMatches = PasswordEncoder.matches(password, storedPassword);
+        System.out.println("密码验证结果: " + (passwordMatches ? "成功" : "失败"));
+
+        if (!passwordMatches) {
+            throw new AuthenticationException("用户名或密码错误");
+        }
+
+        return Optional.of(repairman);
     }
 
     @Transactional(readOnly = true)
@@ -199,29 +228,32 @@ public class RepairmanService {
     //             .sum();
     // }
 
-    // public MaintenanceItem acceptMaintenanceItem(Long repairmanId, Long recordId) {
-    //     Repairman repairman = repairmanRepository.findById(repairmanId)
-    //             .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        
-    //     MaintenanceItem record = maintenanceItemRepository.findById(recordId)
-    //             .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", recordId));
-        
-    //     // 更新维修记录状态
-    //     record.setProgress(10); // 开始维修，设置初始进度
-    //     record.getRepairmen().add(repairman);
-        
-    //     // 更新记录信息
-    //     RecordInfo recordInfo = new RecordInfo();
-    //     recordInfo.setMaintenanceItem(record);
-    //     recordInfo.setUpdateTime(LocalDateTime.now());
-        
-    //     if (record.getRecordInfos() == null) {
-    //         record.setRecordInfos(new java.util.ArrayList<>());
-    //     }
-    //     record.getRecordInfos().add(recordInfo);
-        
-    //     return maintenanceItemRepository.save(record);
-    // }
+    public MaintenanceItem acceptMaintenanceItem(Long repairmanId, Long itemId) {
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+
+        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+
+        // 如果工单状态是ACCEPTED，说明已经被其他维修人员接收
+        if (item.getStatus() == MaintenanceStatus.ACCEPTED) {
+            throw new BadRequestException("工单已被其他维修人员接收");
+        }
+
+        // 检查其他非PENDING状态
+        if (item.getStatus() != null && item.getStatus() != MaintenanceStatus.PENDING) {
+            throw new BadRequestException("工单当前状态不允许接收");
+        }
+
+        if (item.getRepairmen() == null) {
+            item.setRepairmen(new java.util.ArrayList<>());
+        }
+        item.getRepairmen().add(repairman);
+        item.setStatus(MaintenanceStatus.ACCEPTED);
+        item.setProgress(0);
+        item.setUpdateTime(java.time.LocalDateTime.now());
+        return maintenanceItemRepository.save(item);
+    }
 
     // 以维修记录为例，统计材料费用
     public double calculateMaterialCost(MaintenanceRecord record) {
@@ -232,4 +264,4 @@ public class RepairmanService {
                 .mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue())
                 .sum();
     }
-} 
+}

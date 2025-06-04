@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.example.motify.Enum.RepairmanType;
 
 @Data
 @Entity
@@ -31,20 +32,21 @@ public class Repairman {
     @Column(nullable = false)
     private String gender;  // 性别
 
-    @Column(nullable = false, insertable = false, updatable = false)
-    private String type;  // 工资类型
-
     @ManyToOne
-    @JoinColumn(name = "salary_id")
-    @JsonIgnore
-    private Salary salary;  // 工资信息
+    @JoinColumn(name = "type", referencedColumnName = "type")
+    private Salary salary; // 工资信息（可写入）
 
     @ManyToMany(mappedBy = "repairmen")
     @JsonIgnore
     private List<MaintenanceItem> maintenanceItems;  // 维修项目
 
+    @Column(name = "type", insertable = false, updatable = false)
+    private String type; // 或 private RepairmanType type;
+
     // 获取时薪
     public Double getHourlyRate() {
         return salary != null ? salary.getHourlyRate().doubleValue() : 0.0;
     }
+
+    // 通过 repairman.getSalary().getType() 获取工种
 } 

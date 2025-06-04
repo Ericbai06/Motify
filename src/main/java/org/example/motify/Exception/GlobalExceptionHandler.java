@@ -96,6 +96,6 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public ResponseEntity<?> handleAllUncaughtException(Exception ex) {
         return ExceptionLogger.logAndCreateErrorResponse(
-                logger, ex, "System exception - 系统异常", "Internal server error - 服务器内部错误");
+                logger, ex, "System exception - 系统异常", "Internal server error - 服务器内部错误", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

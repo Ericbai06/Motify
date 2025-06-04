@@ -607,7 +607,7 @@ class UserServiceTest {
         // Act & Assert
         BadRequestException exception = assertThrows(BadRequestException.class, 
             () -> userService.submitRushOrder(userId, itemId, reminderMessage));
-        assertEquals("该维修项目已完成或已取消，无法催单", exception.getMessage());
+        assertEquals("该维修项目已完成，无法催单", exception.getMessage());
     }
 
     // Test for submitServiceRating method

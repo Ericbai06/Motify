@@ -163,20 +163,48 @@ class RepairmanServiceTest {
     //     assertEquals(100.0, totalIncome);
     // }
 
-    // @Test
-    // void acceptMaintenanceItem_Success() {
-    //     lenient().when(repairmanRepository.findById(anyLong())).thenReturn(Optional.of(testRepairman));
-    //     lenient().when(maintenanceItemRepository.findById(anyLong())).thenReturn(Optional.of(testMaintenanceItem));
-    //     lenient().when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenReturn(testMaintenanceItem);
-    //     testMaintenanceItem.setRepairmen(new java.util.ArrayList<>());
-    //     org.example.motify.Entity.RecordInfo recordInfo = new org.example.motify.Entity.RecordInfo();
-    //     recordInfo.setTotalAmount(100.0);
-    //     if (testMaintenanceItem.getRecordInfos() == null) {
-    //         testMaintenanceItem.setRecordInfos(new ArrayList<>());
-    //     }
-    //     testMaintenanceItem.getRecordInfos().add(recordInfo);
-    //     MaintenanceItem result = repairmanService.acceptMaintenanceItem(1L, 1L);
-    //     assertNotNull(result);
-    //     assertEquals(10, result.getProgress());
-    // }
+    @Test
+    void acceptMaintenanceItem_Success() {
+        testMaintenanceItem.setStatus(null); // 未被接收
+        testMaintenanceItem.setRepairmen(new ArrayList<>());
+        when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
+        when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(testMaintenanceItem));
+        when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenReturn(testMaintenanceItem);
+
+        MaintenanceItem result = repairmanService.acceptMaintenanceItem(1L, 1L);
+        assertNotNull(result);
+        assertEquals(MaintenanceStatus.ACCEPTED, result.getStatus());
+        assertEquals(0, result.getProgress());
+        assertTrue(result.getRepairmen().contains(testRepairman));
+    }
+
+    @Test
+    void acceptMaintenanceItem_AlreadyAccepted() {
+        testMaintenanceItem.setStatus(MaintenanceStatus.ACCEPTED);
+        when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
+        when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(testMaintenanceItem));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
+            repairmanService.acceptMaintenanceItem(1L, 1L)
+        );
+        assertEquals("工单已被其他维修人员接收", ex.getMessage());
+    }
+
+    @Test
+    void acceptMaintenanceItem_RepairmanNotFound() {
+        when(repairmanRepository.findById(1L)).thenReturn(Optional.empty());
+        when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(testMaintenanceItem));
+        assertThrows(ResourceNotFoundException.class, () ->
+            repairmanService.acceptMaintenanceItem(1L, 1L)
+        );
+    }
+
+    @Test
+    void acceptMaintenanceItem_ItemNotFound() {
+        when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
+        when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () ->
+            repairmanService.acceptMaintenanceItem(1L, 1L)
+        );
+    }
 } 

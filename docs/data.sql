@@ -17,21 +17,29 @@ INSERT INTO admins (username, password, name, email, last_login_time, is_active)
 ('manager', 'manager123', '维修部经理', 'manager@motify.com', '2024-06-02 10:15:00', true);
 
 -- 2. 填充工资类型数据
-INSERT INTO salaries (hourly_rate, type) VALUES
-(80.0, '高级技师'),
-(60.0, '中级技师'),
-(45.0, '初级技师'),
-(100.0, '专家技师'),
-(35.0, '学徒');
+INSERT INTO salaries (type, hourly_rate) VALUES
+('MECHANIC', 80.0),
+('ELECTRICIAN', 60.0),
+('BODYWORKER', 45.0),
+('PAINTER', 100.0),
+('APPRENTICE', 35.0),
+('INSPECTOR', 50.0),
+('DIAGNOSER', 90.0);
 
 -- 3. 填充维修人员数据
-INSERT INTO repairmen (username, password, name, phone, email, gender, type, salary_id) VALUES
-('repairman01', 'repair123', '张师傅', '13800138001', 'zhang@motify.com', '男', '高级技师', 1),
-('repairman02', 'repair123', '李师傅', '13800138002', 'li@motify.com', '男', '中级技师', 2),
-('repairman03', 'repair123', '王师傅', '13800138003', 'wang@motify.com', '男', '初级技师', 3),
-('repairman04', 'repair123', '赵师傅', '13800138004', 'zhao@motify.com', '男', '专家技师', 4),
-('repairman05', 'repair123', '刘师傅', '13800138005', 'liu@motify.com', '女', '中级技师', 2),
-('repairman06', 'repair123', '陈师傅', '13800138006', 'chen@motify.com', '男', '学徒', 5);
+-- 确保 repairmen 表自增主键从1开始
+ALTER TABLE repairmen AUTO_INCREMENT = 1;
+
+INSERT INTO repairmen (username, password, name, phone, email, gender, type) VALUES
+('repairman01', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '张师傅', '13800138001', 'zhang@motify.com', '男', 'MECHANIC'),
+('repairman02', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '李师傅', '13800138002', 'li@motify.com', '男', 'ELECTRICIAN'),
+('repairman03', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '王师傅', '13800138003', 'wang@motify.com', '男', 'BODYWORKER'),
+('repairman04', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '赵师傅', '13800138004', 'zhao@motify.com', '男', 'PAINTER'),
+('repairman05', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '刘师傅', '13800138005', 'liu@motify.com', '女', 'APPRENTICE'),
+('repairman06', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '陈师傅', '13800138006', 'chen@motify.com', '男', 'INSPECTOR');
+
+-- 重置 materials 表自增
+ALTER TABLE materials AUTO_INCREMENT = 1;
 
 -- 4. 填充材料数据
 INSERT INTO materials (name, description, type, stock, price) VALUES
@@ -54,7 +62,11 @@ INSERT INTO materials (name, description, type, stock, price) VALUES
 ('雨刮片', '无骨雨刮器', 'OTHER', 60, 35.0),
 ('防冻液', '长效防冻冷却液', 'OTHER', 40, 68.0);
 
--- 5. 填充用户数据
+-- 清空并重置自增
+DELETE FROM users;
+ALTER TABLE users AUTO_INCREMENT = 1;
+
+-- 插入 users（不指定 user_id，自增）
 INSERT INTO users (username, password, name, phone, email, address) VALUES
 ('user001', 'user123', '张三', '13900139001', 'zhangsan@example.com', '北京市朝阳区建国路88号'),
 ('user002', 'user123', '李四', '13900139002', 'lisi@example.com', '上海市浦东新区陆家嘴环路999号'),
@@ -65,7 +77,10 @@ INSERT INTO users (username, password, name, phone, email, address) VALUES
 ('user007', 'user123', '周九', '13900139007', 'zhoujiu@example.com', '武汉市洪山区光谷大道77号'),
 ('user008', 'user123', '吴十', '13900139008', 'wushi@example.com', '西安市雁塔区科技路168号');
 
--- 6. 填充车辆数据
+-- 清空并重置 cars 表自增
+ALTER TABLE cars AUTO_INCREMENT = 1;
+
+-- 插入 cars，user_id 用 1~8
 INSERT INTO cars (brand, model, license_plate, user_id) VALUES
 ('丰田', '凯美瑞', '京A12345', 1),
 ('本田', '雅阁', '沪B67890', 2),
@@ -77,6 +92,9 @@ INSERT INTO cars (brand, model, license_plate, user_id) VALUES
 ('本田', 'CR-V', '陕H75319', 8),
 ('大众', '途观', '京A98765', 1),
 ('奥迪', 'Q5', '沪B54321', 2);
+
+-- 重置 maintenance_items 表自增
+ALTER TABLE maintenance_items AUTO_INCREMENT = 1;
 
 -- 7. 填充维修项目数据
 INSERT INTO maintenance_items (name, description, status, progress, result, reminder, score, create_time, update_time, complete_time, material_cost, labor_cost, cost, car_id) VALUES
@@ -99,6 +117,9 @@ INSERT INTO item_repairman (item_id, repairman_id) VALUES
 (6, 1), (6, 5),  -- 变速箱保养：张师傅+刘师傅
 (7, 6),          -- 大灯维修：陈师傅
 (8, 3);          -- 底盘检查：王师傅
+
+-- 重置 maintenance_records 表自增
+ALTER TABLE maintenance_records AUTO_INCREMENT = 1;
 
 -- 9. 填充维修记录数据
 INSERT INTO maintenance_records (name, description, cost, repair_man_id, work_hours, item_id) VALUES
