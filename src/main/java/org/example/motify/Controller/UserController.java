@@ -90,14 +90,15 @@ public class UserController {
      * 获取用户车辆列表
      */
     @GetMapping("/{userId}/cars")
-    public Map<String, Object> getUserCars(@PathVariable Long userId) {
-        List<Car> cars = userService.getUserCars(userId);
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("code", 200);
-        resp.put("message", "success");
-        resp.put("data", cars);
-        return resp;
-    }
+public Map<String, Object> getUserCars(@PathVariable Long userId) {
+    List<Map<String, Object>> cars = userService.getUserCarsSafe(userId);
+    
+    Map<String, Object> resp = new HashMap<>();
+    resp.put("code", 200);
+    resp.put("message", "success");
+    resp.put("data", cars);
+    return resp;
+}
 
     /**
      * 添加车辆

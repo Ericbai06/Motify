@@ -25,7 +25,6 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
     //  */
     // @Query(value = "SELECT COUNT(*) > 0 FROM admins WHERE username = :username", nativeQuery = true)
     // boolean existsByUsername(@Param("username") String username);
-    
     /**
      * 更新管理员最后登录时间 - 使用原生SQL
      */

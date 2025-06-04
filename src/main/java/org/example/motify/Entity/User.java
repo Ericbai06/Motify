@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Data
 @Entity
 @Table(name = "users")
@@ -31,5 +33,6 @@ public class User {
     private String address;  // 地址
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore  // 防止JSON序列化时的循环引用
     private List<Car> cars;  // 用户的车辆
 }

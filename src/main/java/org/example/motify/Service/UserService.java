@@ -12,9 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
-
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -135,10 +137,33 @@ public class UserService {
      * @throws ResourceNotFoundException 当用户不存在时
      */
     @Transactional(readOnly = true)
-    public List<Car> getUserCars(Long userId) {
-        User user = getUserById(userId);
-        return user.getCars();
+public List<Map<String, Object>> getUserCarsSafe(Long userId) {
+    // 验证用户是否存在
+    if (!userRepository.existsById(userId)) {
+        throw new ResourceNotFoundException("User", "id", userId);
     }
+    
+    // 使用原生SQL查询，避免懒加载问题
+    List<Object[]> results = carRepository.findCarBasicInfoByUserId(userId);
+    
+    return results.stream().map(row -> {
+        Map<String, Object> carMap = new HashMap<>();
+        carMap.put("carId", row[0]);
+        carMap.put("brand", row[1]);
+        carMap.put("model", row[2]);
+        carMap.put("licensePlate", row[3]);
+        
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("userId", row[4]);
+        userMap.put("username", row[5]);
+        userMap.put("name", row[6]);
+        userMap.put("phone", row[7]);
+        userMap.put("email", row[8]);
+        carMap.put("user", userMap);
+        
+        return carMap;
+    }).collect(Collectors.toList());
+}
 
     /**
      * 添加车辆
