@@ -27,9 +27,6 @@ public class Repairman {
     @Column
     private String email;  // 邮箱
 
-    @Column
-    private String specialty;  // 专长
-
     @Column(nullable = false)
     private String gender;  // 性别
 

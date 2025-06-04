@@ -13,13 +13,10 @@ public class Salary {
     private Long salaryId;
 
     @Column(nullable = false)
-    private Float hourlyRate;  // 小时费率
+    private Float hourlyRate;  // 时薪
 
     @Column(nullable = false, unique = true)
     private String type;  // 工资类型
-
-    @Column(nullable = false)
-    private Float hourlyWage;  // 小时工资
 
     @OneToMany(mappedBy = "salary")
     private List<Repairman> repairmen;  // 关联的维修人员

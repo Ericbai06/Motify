@@ -18,46 +18,55 @@ public class MaintenanceItem {
     private Long itemId;
 
     @Column(nullable = false)
-    private String name;  // 维修项目名称
+    private String name; // 维修项目名称
 
     @Column(nullable = false)
-    private String description;  // 维修描述
+    private String description; // 维修描述
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private MaintenanceStatus status;  // 维修状态
+    private MaintenanceStatus status; // 维修状态
 
     @Column
-    private Integer progress;  // 维修进度
+    private Integer progress; // 维修进度
 
     @Column
-    private String result;  // 维修结果
+    private String result; // 维修结果
 
     @Column
-    private String reminder;  // 提醒信息
+    private String reminder; // 提醒信息
 
     @Column
-    private Integer score;  // 用户评分
+    private Integer score; // 用户评分
+
+    // @Column
+    // private Double workHours; // 工作时长
 
     @Column(nullable = false)
-    private Double cost;  // 维修总成本
+    private LocalDateTime createTime; // 创建时间
 
     @Column
-    private Double workHours;  // 工作时长
+    private LocalDateTime updateTime; // 更新时间
+
+    @Column
+    private LocalDateTime completeTime; // 完成时间
+
+    @Column
+    private Double materialCost; // 材料费用
+
+    @Column
+    private Double laborCost; // 工时费用
+
+    @Column(nullable = false)
+    private Double cost
+    ; // 维修总成本
 
     @ManyToOne
     @JoinColumn(name = "car_id", nullable = false)
     private Car car;
 
-    @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
-    private List<RecordInfo> recordInfos;
-
     @ManyToMany
-    @JoinTable(
-        name = "item_repairman",
-        joinColumns = @JoinColumn(name = "item_id"),
-        inverseJoinColumns = @JoinColumn(name = "repairman_id")
-    )
+    @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id"), inverseJoinColumns = @JoinColumn(name = "repairman_id"))
     private List<Repairman> repairmen;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
