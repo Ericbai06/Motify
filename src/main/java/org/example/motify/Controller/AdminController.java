@@ -5,6 +5,7 @@ import org.example.motify.Service.AdminService;
 import org.example.motify.Exception.AuthenticationException;
 import org.example.motify.Exception.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +22,9 @@ public class AdminController {
     /**
      * 管理员注册
      */
-    @PostMapping("/register")
+    @PostMapping(value = "/register",
+                 produces = MediaType.APPLICATION_JSON_VALUE, 
+                 consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> registerAdmin(@RequestBody Admin admin) {
         try {
             Admin registeredAdmin = adminService.registerAdmin(admin);
@@ -48,7 +51,9 @@ public class AdminController {
     /**
      * 管理员登录
      */
-    @PostMapping("/login")
+    @PostMapping(value = "/login",
+                 produces = MediaType.APPLICATION_JSON_VALUE, 
+                 consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> loginData) {
         try {
             String username = loginData.get("username");

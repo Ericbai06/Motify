@@ -189,6 +189,12 @@ public List<Map<String, Object>> getUserCarsSafe(Long userId) {
             throw new BadRequestException("车牌号不能为空");
         }
         
+        // 检查车牌号是否已存在
+        List<Car> existingCars = carRepository.findByLicensePlate(car.getLicensePlate().trim());
+        if (!existingCars.isEmpty()) {
+            throw new BadRequestException("车牌号 '" + car.getLicensePlate() + "' 已存在，请检查输入");
+        }
+        
         // 设置车辆所有者
         car.setUser(user);
         

@@ -2,8 +2,8 @@ package org.example.motify.Entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Entity
@@ -32,6 +32,7 @@ public class MaintenanceRecord {
 
     @ManyToOne
     @JoinColumn(name = "item_id", nullable = false)
+    @JsonIgnore
     private MaintenanceItem maintenanceItem;
 
     @ElementCollection
@@ -41,6 +42,7 @@ public class MaintenanceRecord {
     )
     @MapKeyJoinColumn(name = "material_id")
     @Column(name = "amount")
+    @JsonIgnore
     private Map<Material, Integer> materialAmounts;  // 材料及其使用数量
 
     // 计算材料总费用

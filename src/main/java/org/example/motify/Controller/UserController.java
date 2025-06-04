@@ -5,21 +5,29 @@ import org.example.motify.Entity.MaintenanceItem;
 import org.example.motify.Entity.User;
 import org.example.motify.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/auth/users")
 public class UserController {
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
     @Autowired
     private UserService userService;
 
     /**
      * 用户注册
      */
-    @PostMapping("/register")
+    @PostMapping(value = "/register",
+                 produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> register(@RequestBody User user) {
         User result = userService.register(user);
         Map<String, Object> data = new HashMap<>();
@@ -36,7 +44,8 @@ public class UserController {
     /**
      * 用户登录
      */
-    @PostMapping("/login")
+    @PostMapping(value = "/login",
+                 produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> login(@RequestBody Map<String, String> req) {
         String username = req.get("username");
         String password = req.get("password");
@@ -103,19 +112,85 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
     /**
      * 添加车辆
      */
-    @PostMapping("/{userId}/cars")
-    public Map<String, Object> addCar(@PathVariable Long userId, @RequestBody Car car) {
-        Car result = userService.addCar(userId, car);
-        Map<String, Object> data = new HashMap<>();
-        data.put("carId", result.getCarId());
-        data.put("brand", result.getBrand());
-        data.put("model", result.getModel());
-        data.put("licensePlate", result.getLicensePlate());
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("code", 200);
-        resp.put("message", "success");
-        resp.put("data", data);
-        return resp;
+    @RequestMapping(value = "/{userId}/cars", method = RequestMethod.POST)
+    public Map<String, Object> addCar(@PathVariable Long userId, 
+                                     HttpServletRequest request) {
+        logger.info("========== START addCar request ==========");
+        logger.info("Received addCar request - userId: {}", userId);
+        logger.info("Request content-type: '{}'", request.getContentType());
+        logger.info("Request method: {}", request.getMethod());
+        logger.info("Request URI: {}", request.getRequestURI());
+        
+        try {
+            // 手动读取请求体
+            StringBuilder requestBody = new StringBuilder();
+            String line;
+            try (java.io.BufferedReader reader = request.getReader()) {
+                while ((line = reader.readLine()) != null) {
+                    requestBody.append(line);
+                }
+            }
+            
+            logger.info("Request body: {}", requestBody.toString());
+            
+            // 手动解析JSON
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            Car car = objectMapper.readValue(requestBody.toString(), Car.class);
+            
+            if (car == null) {
+                logger.error("Car object is null in request body");
+                Map<String, Object> errorResp = new HashMap<>();
+                errorResp.put("code", 400);
+                errorResp.put("message", "Car object cannot be null");
+                errorResp.put("data", null);
+                return errorResp;
+            }
+            
+            logger.info("Car object received - brand: {}, model: {}, licensePlate: {}", 
+                       car.getBrand(), car.getModel(), car.getLicensePlate());
+            
+            // Validate car fields
+            if (car.getBrand() == null || car.getBrand().trim().isEmpty()) {
+                logger.error("Car brand is null or empty");
+                Map<String, Object> errorResp = new HashMap<>();
+                errorResp.put("code", 400);
+                errorResp.put("message", "Car brand cannot be null or empty");
+                errorResp.put("data", null);
+                return errorResp;
+            }
+            
+            logger.info("Calling userService.addCar with userId: {} and car: {}", userId, car);
+            Car result = userService.addCar(userId, car);
+            logger.info("Successfully created car with ID: {}", result.getCarId());
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("carId", result.getCarId());
+            data.put("brand", result.getBrand());
+            data.put("model", result.getModel());
+            data.put("licensePlate", result.getLicensePlate());
+            
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("code", 200);
+            resp.put("message", "success");
+            resp.put("data", data);
+            
+            logger.info("Returning successful response with car ID: {}", result.getCarId());
+            logger.info("========== END addCar request SUCCESS ==========");
+            return resp;
+            
+        } catch (Exception e) {
+            logger.error("========== ERROR in addCar method ==========");
+            logger.error("Error details - userId: {}, error message: {}", userId, e.getMessage());
+            logger.error("Exception type: {}", e.getClass().getSimpleName());
+            logger.error("Full stack trace: ", e);
+            logger.error("========== END addCar request ERROR ==========");
+            
+            Map<String, Object> errorResp = new HashMap<>();
+            errorResp.put("code", 500);
+            errorResp.put("message", "Internal server error: " + e.getMessage());
+            errorResp.put("data", null);
+            return errorResp;
+        }
     }
 
     /**
@@ -147,7 +222,8 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
     /**
      * 提交维修请求
      */
-    @PostMapping("/{userId}/maintenance-records")
+    @PostMapping(value = "/{userId}/maintenance-records", 
+                 produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> submitRepairRequest(@PathVariable Long userId, @RequestBody Map<String, Object> req) {
         Long carId = Long.valueOf(req.get("carId").toString());
         String name = (String) req.get("name");
@@ -175,7 +251,8 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
     /**
      * 重置密码
      */
-    @PostMapping("/reset-password")
+    @PostMapping(value = "/reset-password",
+                 produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> resetPassword(@RequestBody Map<String, String> req) {
         String phone = req.get("phone");
         String code = req.get("code");
@@ -191,7 +268,8 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
     /**
      * 提交催单请求
      */
-    @PostMapping("/{userId}/maintenance-records/{itemId}/rush-order")
+    @PostMapping(value = "/{userId}/maintenance-records/{itemId}/rush-order",
+                 produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> submitRushOrder(@PathVariable Long userId, 
                                                @PathVariable Long itemId, 
                                                @RequestBody Map<String, String> req) {
@@ -216,7 +294,8 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
     /**
      * 提交服务评分
      */
-    @PostMapping("/{userId}/maintenance-records/{itemId}/rating")
+    @PostMapping(value = "/{userId}/maintenance-records/{itemId}/rating",
+                 produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> submitServiceRating(@PathVariable Long userId, 
                                                    @PathVariable Long itemId, 
                                                    @RequestBody Map<String, Integer> req) {
@@ -274,6 +353,26 @@ public Map<String, Object> getUserCars(@PathVariable Long userId) {
         resp.put("code", 200);
         resp.put("message", "success");
         resp.put("data", data);
+        return resp;
+    }
+    
+    /**
+     * 测试端点 - 用于诊断Content-Type问题
+     */
+    @RequestMapping(value = "/{userId}/cars/test", method = RequestMethod.POST)
+    public Map<String, Object> testAddCar(@PathVariable Long userId, 
+                                         HttpServletRequest request) {
+        logger.info("========== TEST endpoint reached ==========");
+        logger.info("Request content-type: '{}'", request.getContentType());
+        logger.info("Request method: {}", request.getMethod());
+        logger.info("Request URI: {}", request.getRequestURI());
+        
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "Test endpoint reached successfully");
+        resp.put("contentType", request.getContentType());
+        resp.put("method", request.getMethod());
+        resp.put("uri", request.getRequestURI());
         return resp;
     }
 }

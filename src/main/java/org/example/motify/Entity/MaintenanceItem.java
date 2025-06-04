@@ -3,9 +3,9 @@ package org.example.motify.Entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
-import java.util.Map;
 import org.example.motify.Enum.MaintenanceStatus;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Entity
@@ -59,14 +59,18 @@ public class MaintenanceItem {
     private Double cost
     ; // 维修总成本
 
+    
     @ManyToOne
     @JoinColumn(name = "car_id", nullable = false)
+    @JsonIgnore
     private Car car;
 
     @ManyToMany
     @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id"), inverseJoinColumns = @JoinColumn(name = "repairman_id"))
+    @JsonIgnore
     private List<Repairman> repairmen;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<MaintenanceRecord> maintenanceRecords;
 }

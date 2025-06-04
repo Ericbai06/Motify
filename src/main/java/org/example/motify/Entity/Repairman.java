@@ -3,6 +3,7 @@ package org.example.motify.Entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Entity
@@ -35,9 +36,11 @@ public class Repairman {
 
     @ManyToOne
     @JoinColumn(name = "salary_id")
+    @JsonIgnore
     private Salary salary;  // 工资信息
 
     @ManyToMany(mappedBy = "repairmen")
+    @JsonIgnore
     private List<MaintenanceItem> maintenanceItems;  // 维修项目
 
     // 获取时薪
