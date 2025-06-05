@@ -337,25 +337,26 @@ GET /api/auth/users/1/maintenance-records/current
 **期望响应**:
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": [
-    {
-      "itemId": 1,
-      "name": "发动机维修",
-      "description": "发动机异响需要检修",
-      "status": "IN_PROGRESS",
-      "progress": 60,
-      "reminder": "请加急处理",
-      "cost": 1200.0,
-      "car": {
-        "carId": 1,
-        "brand": "Toyota",
-        "model": "Camry",
-        "licensePlate": "京A12345"
-      }
-    }
-  ]
+    "code": 200,
+    "data": [
+        {
+            "itemId": 3,
+            "name": "轮胎更换",
+            "description": "更换四条轮胎",
+            "status": "IN_PROGRESS",
+            "progress": 75,
+            "result": null,
+            "reminder": null,
+            "score": null,
+            "createTime": "2024-06-01T16:30:00",
+            "updateTime": "2024-06-01T23:00:00",
+            "completeTime": null,
+            "materialCost": 2720.0,
+            "laborCost": 200.0,
+            "cost": 2920.0
+        }
+    ],
+    "message": "success"
 }
 ```
 
@@ -391,16 +392,17 @@ GET /api/auth/users/2/maintenance-records/current
 **期望响应**:
 ```json
 {
-  "code": 200,
-  "message": "维修请求提交成功",
-  "data": {
-    "itemId": 4,
-    "name": "空调维修",
-    "description": "空调制冷效果差，需要检查制冷剂",
-    "status": "PENDING",
-    "progress": 0,
-    "cost": 0.0
-  }
+    "code": 200,
+    "data": {
+        "itemId": 9,
+        "cost": 0.0,
+        "createTime": "2025-06-04T21:47:05.8366608",
+        "name": "空调维修",
+        "description": "空调制冷效果差，需要检查制冷剂",
+        "progress": 0,
+        "status": "PENDING"
+    },
+    "message": "维修请求提交成功"
 }
 ```
 
@@ -429,15 +431,15 @@ GET /api/auth/users/2/maintenance-records/current
 **期望响应**:
 ```json
 {
-  "code": 200,
-  "message": "催单提交成功",
-  "data": {
-    "itemId": 1,
-    "name": "发动机维修",
-    "status": "IN_PROGRESS",
-    "reminder": "请加急处理，明天急需用车",
-    "updateTime": "2024-01-15T16:30:00"
-  }
+    "code": 200,
+    "data": {
+        "itemId": 9,
+        "reminder": "请加急处理，明天急需用车",
+        "name": "空调维修",
+        "updateTime": "2025-06-04T21:51:18.6265936",
+        "status": "PENDING"
+    },
+    "message": "催单提交成功"
 }
 ```
 
@@ -470,15 +472,15 @@ POST /api/auth/users/1/maintenance-records/2/rating
 **期望响应**:
 ```json
 {
-  "code": 200,
-  "message": "评分提交成功",
-  "data": {
-    "itemId": 2,
-    "name": "刹车片更换",
-    "status": "COMPLETED",
-    "score": 4,
-    "updateTime": "2024-01-15T16:45:00"
-  }
+    "code": 200,
+    "data": {
+        "itemId": 1,
+        "score": 5,
+        "name": "发动机保养",
+        "updateTime": "2025-06-04T21:52:42.6405402",
+        "status": "COMPLETED"
+    },
+    "message": "评分提交成功"
 }
 ```
 
@@ -513,30 +515,30 @@ GET /api/auth/users/1/maintenance-records/1
 **期望响应**:
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": {
-    "itemId": 1,
-    "name": "发动机维修",
-    "description": "发动机异响需要检修",
-    "status": "IN_PROGRESS",
-    "progress": 60,
-    "result": null,
-    "reminder": "请加急处理",
-    "score": null,
-    "createTime": "2024-01-15T10:00:00",
-    "updateTime": "2024-01-15T16:30:00",
-    "completeTime": null,
-    "cost": 1200.0,
-    "materialCost": 800.0,
-    "laborCost": 400.0,
-    "car": {
-      "carId": 1,
-      "brand": "Toyota",
-      "model": "Camry",
-      "licensePlate": "京A12345"
-    }
-  }
+    "code": 200,
+    "data": {
+        "cost": 538.0,
+        "reminder": "下次保养时间：2024-12-01",
+        "description": "更换机油、机滤、空滤",
+        "completeTime": "2024-05-15T19:30:00",
+        "updateTime": "2025-06-04T21:52:42.64054",
+        "materialCost": 378.0,
+        "result": "保养完成，发动机运转正常",
+        "itemId": 1,
+        "score": 5,
+        "createTime": "2024-05-15T17:00:00",
+        "car": {
+            "licensePlate": "京A12345",
+            "model": "凯美瑞",
+            "brand": "丰田",
+            "carId": 1
+        },
+        "name": "发动机保养",
+        "progress": 100,
+        "laborCost": 160.0,
+        "status": "COMPLETED"
+    },
+    "message": "success"
 }
 ```
 
