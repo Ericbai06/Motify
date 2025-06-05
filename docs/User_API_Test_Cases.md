@@ -137,13 +137,16 @@ GET /api/auth/users/1
 **期望响应**:
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": {
-    "userId": 1,
-    "username": "testuser1",
-    "phone": "13800138001"
-  }
+    "code": 200,
+    "data": {
+        "address": "北京市朝阳区建国路88号",
+        "phone": "13800138001",
+        "name": "张三",
+        "userId": 1,
+        "email": "zhangsan@example.com",
+        "username": "testuser1_updated"
+    },
+    "message": "success"
 }
 ```
 
@@ -154,19 +157,34 @@ GET /api/auth/users/999
 
 ---
 
-### 4. 更新用户信息（有问题但是用不到）
+### 4. 更新用户信息
 
 **PUT** `/api/auth/users/{userId}`
 
-#### 测试用例 4.1: 更新用户信息
+#### 测试用例 4.1: 更新用户信息（可以只更改一部分信息）
 ```json
 {
-  "username": "testuser1_updated",
-  "phone": "13800138001",
-  "name": "更新后的用户名",
-  "email": "updated@example.com"
+        "address": "test",
+        "phone": "13708459697",
+        "name": "test",
+        "email": "test@test.com",
+        "username": "test"
 }
 ```
+
+#### 返回结果
+{
+    "code": 200,
+    "data": {
+        "address": "test",
+        "phone": "13708459697",
+        "name": "test",
+        "userId": 1,
+        "email": "test@test.com",
+        "username": "test"
+    },
+    "message": "用户信息更新成功"
+}
 
 #### 测试用例 4.2: 更新为已存在的用户名（应失败）
 ```json
