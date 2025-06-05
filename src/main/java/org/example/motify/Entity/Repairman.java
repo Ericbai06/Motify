@@ -38,11 +38,11 @@ public class Repairman {
     private RepairmanType type;  // 工种类型，可写字段
 
     // 通过type字段与Salary关联，只读方式
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)  // 改为EAGER加载
     @JoinColumn(name = "type", referencedColumnName = "type", insertable = false, updatable = false)
     private Salary salary;
 
-    @ManyToMany(mappedBy = "repairmen")
+    @ManyToMany(mappedBy = "repairmen", fetch = FetchType.EAGER)  // 改为EAGER加载
     @JsonIgnore
     private List<MaintenanceItem> maintenanceItems;  // 维修项目
 

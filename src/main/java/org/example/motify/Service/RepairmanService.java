@@ -219,6 +219,7 @@ public class RepairmanService {
     }
 
     public MaintenanceItem saveMaintenanceItem(MaintenanceItem record) {
+        // 移除可能导致空指针异常的打印语句
         if (record.getCar() == null || record.getCar().getCarId() == null) {
             throw new BadRequestException("车辆信息不能为空");
         }
@@ -228,6 +229,20 @@ public class RepairmanService {
         if (record.getProgress() < 0 || record.getProgress() > 100) {
             throw new BadRequestException("维修进度必须在0-100之间");
         }
+
+        // 设置创建时间
+        if (record.getCreateTime() == null) {
+            record.setCreateTime(LocalDateTime.now());
+        }
+
+        // 设置更新时间
+        record.setUpdateTime(LocalDateTime.now());
+
+        // 如果未设置状态，默认设为PENDING
+        if (record.getStatus() == null) {
+            record.setStatus(MaintenanceStatus.PENDING);
+        }
+
         return maintenanceItemRepository.save(record);
     }
 
@@ -408,6 +423,7 @@ public class RepairmanService {
                 
                 // 创建材料使用记录
                 RecordMaterial recordMaterial = new RecordMaterial();
+                // 不再设置 id，使用数据库的自动递增功能
                 recordMaterial.setRecordId(savedRecord.getRecordId());
                 recordMaterial.setMaterialId(materialId);
                 recordMaterial.setAmount(quantity);
@@ -466,3 +482,4 @@ public class RepairmanService {
         return result;
     }
 }
+

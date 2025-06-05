@@ -192,6 +192,7 @@
     }
   ],
   "progress": 0,
+  "status":"IN_PROGRESS",
   "cost": 0.0
 }
 ```

@@ -62,12 +62,10 @@ public class MaintenanceItem {
     
     @ManyToOne
     @JoinColumn(name = "car_id", nullable = false)
-    @JsonIgnore
     private Car car;
 
     @ManyToMany
     @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id"), inverseJoinColumns = @JoinColumn(name = "repairman_id"))
-    @JsonIgnore
     private List<Repairman> repairmen;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)

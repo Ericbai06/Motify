@@ -34,8 +34,11 @@ public class RepairmanController {
         String username = credentials.get("username");
         String password = credentials.get("password");
         Optional<Repairman> repairman = repairmanService.login(username, password);
-        return repairman.map(ExceptionLogger::createSuccessResponse)
-                .orElseGet(() -> ExceptionLogger.createNotFoundResponse("Repairman", username));
+        if (repairman.isPresent()) {
+            return ExceptionLogger.createSuccessResponse(repairman.get());
+        } else {
+            return ExceptionLogger.createNotFoundResponse("Repairman", username);
+        }
     }
 
     // 获取维修人员信息
@@ -43,8 +46,11 @@ public class RepairmanController {
     public ResponseEntity<?> getRepairmanInfo(@RequestBody Map<String, Long> payload) {
         Long repairmanId = payload.get("repairmanId");
         Optional<Repairman> repairman = repairmanService.getRepairmanById(repairmanId);
-        return repairman.map(ExceptionLogger::createSuccessResponse)
-                .orElseGet(() -> ExceptionLogger.createNotFoundResponse("Repairman", repairmanId));
+        if (repairman.isPresent()) {
+            return ExceptionLogger.createSuccessResponse(repairman.get());
+        } else {
+            return ExceptionLogger.createNotFoundResponse("Repairman", repairmanId);
+        }
     }
 
     // 更新维修人员信息
