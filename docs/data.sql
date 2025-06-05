@@ -31,12 +31,12 @@ INSERT INTO salaries (type, hourly_rate) VALUES
 ALTER TABLE repairmen AUTO_INCREMENT = 1;
 
 INSERT INTO repairmen (username, password, name, phone, email, gender, type) VALUES
-('repairman01', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '张师傅', '13800138001', 'zhang@motify.com', '男', 'MECHANIC'),
-('repairman02', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '李师傅', '13800138002', 'li@motify.com', '男', 'ELECTRICIAN'),
-('repairman03', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '王师傅', '13800138003', 'wang@motify.com', '男', 'BODYWORKER'),
-('repairman04', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '赵师傅', '13800138004', 'zhao@motify.com', '男', 'PAINTER'),
-('repairman05', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '刘师傅', '13800138005', 'liu@motify.com', '女', 'APPRENTICE'),
-('repairman06', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '陈师傅', '13800138006', 'chen@motify.com', '男', 'INSPECTOR');
+('repairman01', 'kb2iikDsLq3qS57109XC8G1VIRfjzfMrrr4vkv9fFvw=', '张师傅', '13800138001', 'zhang@motify.com', '男', 'MECHANIC'),
+('repairman02', 'kb2iikDsLq3qS57109XC8G1VIRfjzfMrrr4vkv9fFvw=', '李师傅', '13800138002', 'li@motify.com', '男', 'ELECTRICIAN'),
+('repairman03', 'kb2iikDsLq3qS57109XC8G1VIRfjzfMrrr4vkv9fFvw=', '王师傅', '13800138003', 'wang@motify.com', '男', 'BODYWORKER'),
+('repairman04', 'kb2iikDsLq3qS57109XC8G1VIRfjzfMrrr4vkv9fFvw=', '赵师傅', '13800138004', 'zhao@motify.com', '男', 'PAINTER'),
+('repairman05', 'kb2iikDsLq3qS57109XC8G1VIRfjzfMrrr4vkv9fFvw=', '刘师傅', '13800138005', 'liu@motify.com', '女', 'APPRENTICE'),
+('repairman06', 'kb2iikDsLq3qS57109XC8G1VIRfjzfMrrr4vkv9fFvw=', '陈师傅', '13800138006', 'chen@motify.com', '男', 'INSPECTOR');
 
 -- 重置 materials 表自增
 ALTER TABLE materials AUTO_INCREMENT = 1;
@@ -132,17 +132,17 @@ INSERT INTO maintenance_records (name, description, cost, repair_man_id, work_ho
 ('更换大灯灯泡', '更换LED大灯灯泡', 135.0, 6, 1, 7);
 
 -- 10. 填充维修记录-材料关联数据
-INSERT INTO record_material (record_id, material_id, amount) VALUES
+INSERT INTO record_material (id, record_id, material_id, amount) VALUES
 -- 更换机油机滤记录
-(1, 1, 1),  -- 美孚1号机油 1桶
-(1, 4, 1),  -- 机油滤芯 1个
+(1, 1, 1, 1),  -- 美孚1号机油 1桶
+(2, 1, 4, 1),  -- 机油滤芯 1个
 -- 更换空气滤芯记录
-(2, 3, 1),  -- 空气滤芯 1个
+(3, 2, 3, 1),  -- 空气滤芯 1个
 -- 更换刹车片记录
-(3, 6, 1),  -- 前刹车片 1套
+(4, 3, 6, 1),  -- 前刹车片 1套
 -- 更换轮胎记录
-(4, 9, 4),  -- 米其林轮胎 4条
+(5, 4, 9, 4),  -- 米其林轮胎 4条
 -- 更换电池记录
-(5, 11, 1), -- 瓦尔塔电池 1个
+(6, 5, 11, 1), -- 瓦尔塔电池 1个
 -- 更换大灯记录（使用火花塞代替大灯灯泡）
-(7, 13, 2); -- 火花塞 2个
+(7, 7, 13, 2); -- 火花塞 2个

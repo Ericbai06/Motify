@@ -20,7 +20,7 @@ public class Repairman {
     @Column(nullable = false)
     private String password;  // 密码
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String name;  // 姓名
 
     @Column
@@ -57,4 +57,4 @@ public class Repairman {
         // 这个方法不应直接修改工资，因为工资由type关联的Salary决定
         // 为了兼容API，这里提供一个空实现
     }
-} 
+}
