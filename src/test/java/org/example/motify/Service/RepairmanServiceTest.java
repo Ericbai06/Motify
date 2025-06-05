@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.example.motify.util.PasswordEncoder;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
@@ -29,7 +28,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class RepairmanServiceTest {
@@ -45,10 +43,10 @@ class RepairmanServiceTest {
 
     @Mock
     private CarRepository carRepository;
-    
+
     @Mock
     private MaintenanceRecordRepository maintenanceRecordRepository;
-    
+
     @Mock
     private RecordMaterialRepository recordMaterialRepository;
 
@@ -72,7 +70,7 @@ class RepairmanServiceTest {
         testRepairman.setPhone("1234567890");
         testRepairman.setGender("男");
         testRepairman.setType(RepairmanType.MECHANIC);
-        
+
         testSalary = new Salary();
         testSalary.setType(RepairmanType.MECHANIC);
         testSalary.setHourlyRate(80.0f);
@@ -92,7 +90,7 @@ class RepairmanServiceTest {
         when(repairmanRepository.existsByUsername(anyString())).thenReturn(false);
         when(repairmanRepository.save(any(Repairman.class))).thenReturn(testRepairman);
         when(salaryRepository.findByType(any(RepairmanType.class))).thenReturn(testSalary);
-        
+
         Repairman result = repairmanService.register(testRepairman);
 
         assertNotNull(result);
@@ -108,7 +106,7 @@ class RepairmanServiceTest {
         assertThrows(BadRequestException.class, () -> {
             repairmanService.register(testRepairman);
         });
-        
+
         verify(repairmanRepository).existsByUsername(anyString());
         verifyNoMoreInteractions(repairmanRepository);
         verifyNoInteractions(salaryRepository);
@@ -129,8 +127,8 @@ class RepairmanServiceTest {
         when(repairmanRepository.findByUsername(anyString()))
                 .thenReturn(Optional.of(testRepairman));
 
-        assertThrows(AuthenticationException.class, 
-            () -> repairmanService.login("testRepairman", "wrongPassword"));
+        assertThrows(AuthenticationException.class,
+                () -> repairmanService.login("testRepairman", "wrongPassword"));
     }
 
     @Test
@@ -151,36 +149,39 @@ class RepairmanServiceTest {
 
     // @Test
     // void updateMaintenanceItem_Success() {
-    //     lenient().when(maintenanceItemRepository.findById(anyLong())).thenReturn(Optional.of(testMaintenanceItem));
-    //     lenient().when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenReturn(testMaintenanceItem);
-    //     MaintenanceItem result = repairmanService.updateMaintenanceItem(1L, testMaintenanceItem);
-    //     assertNotNull(result);
-    //     assertEquals(testMaintenanceItem.getItemId(), result.getItemId());
+    // lenient().when(maintenanceItemRepository.findById(anyLong())).thenReturn(Optional.of(testMaintenanceItem));
+    // lenient().when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenReturn(testMaintenanceItem);
+    // MaintenanceItem result = repairmanService.updateMaintenanceItem(1L,
+    // testMaintenanceItem);
+    // assertNotNull(result);
+    // assertEquals(testMaintenanceItem.getItemId(), result.getItemId());
     // }
 
     // @Test
     // void getRepairmanCurrentRecords_Success() {
-    //     testRepairman.setMaintenanceItems(Collections.singletonList(testMaintenanceItem));
-    //     lenient().when(repairmanRepository.findById(anyLong())).thenReturn(Optional.of(testRepairman));
-    //     List<MaintenanceItem> results = repairmanService.getRepairmanCurrentRecords(1L);
-    //     assertNotNull(results);
-    //     assertFalse(results.isEmpty());
-    //     assertEquals(1, results.size());
+    // testRepairman.setMaintenanceItems(Collections.singletonList(testMaintenanceItem));
+    // lenient().when(repairmanRepository.findById(anyLong())).thenReturn(Optional.of(testRepairman));
+    // List<MaintenanceItem> results =
+    // repairmanService.getRepairmanCurrentRecords(1L);
+    // assertNotNull(results);
+    // assertFalse(results.isEmpty());
+    // assertEquals(1, results.size());
     // }
 
     // @Test
     // void calculateTotalIncome_Success() {
-    //     testRepairman.setMaintenanceItems(Collections.singletonList(testMaintenanceItem));
-    //     lenient().when(repairmanRepository.findById(anyLong())).thenReturn(Optional.of(testRepairman));
-    //     org.example.motify.Entity.RecordInfo recordInfo = new org.example.motify.Entity.RecordInfo();
-    //     recordInfo.setTotalAmount(100.0);
-    //     if (testMaintenanceItem.getRecordInfos() == null) {
-    //         testMaintenanceItem.setRecordInfos(new ArrayList<>());
-    //     }
-    //     testMaintenanceItem.getRecordInfos().add(recordInfo);
-    //     testMaintenanceItem.setProgress(100);
-    //     double totalIncome = repairmanService.calculateTotalIncome(1L);
-    //     assertEquals(100.0, totalIncome);
+    // testRepairman.setMaintenanceItems(Collections.singletonList(testMaintenanceItem));
+    // lenient().when(repairmanRepository.findById(anyLong())).thenReturn(Optional.of(testRepairman));
+    // org.example.motify.Entity.RecordInfo recordInfo = new
+    // org.example.motify.Entity.RecordInfo();
+    // recordInfo.setTotalAmount(100.0);
+    // if (testMaintenanceItem.getRecordInfos() == null) {
+    // testMaintenanceItem.setRecordInfos(new ArrayList<>());
+    // }
+    // testMaintenanceItem.getRecordInfos().add(recordInfo);
+    // testMaintenanceItem.setProgress(100);
+    // double totalIncome = repairmanService.calculateTotalIncome(1L);
+    // assertEquals(100.0, totalIncome);
     // }
 
     @Test
@@ -204,20 +205,17 @@ class RepairmanServiceTest {
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
         when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(testMaintenanceItem));
 
-        BadRequestException ex = assertThrows(BadRequestException.class, () ->
-            repairmanService.acceptMaintenanceItem(1L, 1L)
-        );
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> repairmanService.acceptMaintenanceItem(1L, 1L));
         assertEquals("工单已被其他维修人员接收", ex.getMessage());
     }
 
     @Test
     void acceptMaintenanceItem_RepairmanNotFound() {
         when(repairmanRepository.findById(1L)).thenReturn(Optional.empty());
-        
-        assertThrows(ResourceNotFoundException.class, () ->
-            repairmanService.acceptMaintenanceItem(1L, 1L)
-        );
-        
+
+        assertThrows(ResourceNotFoundException.class, () -> repairmanService.acceptMaintenanceItem(1L, 1L));
+
         verify(repairmanRepository).findById(1L);
         verifyNoInteractions(maintenanceItemRepository);
     }
@@ -226,9 +224,7 @@ class RepairmanServiceTest {
     void acceptMaintenanceItem_ItemNotFound() {
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
         when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () ->
-            repairmanService.acceptMaintenanceItem(1L, 1L)
-        );
+        assertThrows(ResourceNotFoundException.class, () -> repairmanService.acceptMaintenanceItem(1L, 1L));
     }
 
     @Test
@@ -236,13 +232,13 @@ class RepairmanServiceTest {
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(1L);
         item.setStatus(MaintenanceStatus.PENDING);
-        
+
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
         when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(item));
         when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenAnswer(i -> i.getArgument(0));
-        
+
         MaintenanceItem result = repairmanService.rejectMaintenanceItem(1L, 1L, "太忙了");
-        
+
         assertNotNull(result);
         assertEquals(MaintenanceStatus.CANCELLED, result.getStatus());
         assertEquals("太忙了", result.getResult());
@@ -254,14 +250,13 @@ class RepairmanServiceTest {
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(1L);
         item.setStatus(MaintenanceStatus.IN_PROGRESS);
-        
+
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
         when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(item));
-        
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> 
-            repairmanService.rejectMaintenanceItem(1L, 1L, "太忙了")
-        );
-        
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> repairmanService.rejectMaintenanceItem(1L, 1L, "太忙了"));
+
         assertEquals("工单当前状态不允许拒绝", ex.getMessage());
     }
 
@@ -274,13 +269,13 @@ class RepairmanServiceTest {
         List<Repairman> repairmen = new ArrayList<>();
         repairmen.add(testRepairman);
         item.setRepairmen(repairmen);
-        
+
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
         when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(item));
         when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenAnswer(i -> i.getArgument(0));
-        
+
         MaintenanceItem result = repairmanService.updateMaintenanceProgress(1L, 1L, 75, "更新进度");
-        
+
         assertNotNull(result);
         assertEquals(75, result.getProgress());
         assertTrue(result.getDescription().contains("更新进度"));
@@ -292,14 +287,13 @@ class RepairmanServiceTest {
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(1L);
         item.setRepairmen(new ArrayList<>());
-        
+
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
         when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(item));
-        
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> 
-            repairmanService.updateMaintenanceProgress(1L, 1L, 50, "更新进度")
-        );
-        
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> repairmanService.updateMaintenanceProgress(1L, 1L, 50, "更新进度"));
+
         assertEquals("该工单不属于此维修人员", ex.getMessage());
     }
 
@@ -312,13 +306,13 @@ class RepairmanServiceTest {
         List<Repairman> repairmen = new ArrayList<>();
         repairmen.add(testRepairman);
         item.setRepairmen(repairmen);
-        
+
         Material material = new Material();
         material.setMaterialId(1L);
         material.setName("测试材料");
         material.setPrice(50.0);
         material.setStock(10);
-        
+
         // 设置模拟
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
         when(maintenanceItemRepository.findById(1L)).thenReturn(Optional.of(item));
@@ -331,7 +325,7 @@ class RepairmanServiceTest {
             return record;
         });
         when(recordMaterialRepository.save(any(RecordMaterial.class))).thenAnswer(i -> i.getArgument(0));
-        
+
         // 设置测试数据
         String result = "维修完成";
         Double workingHours = 2.0;
@@ -340,10 +334,11 @@ class RepairmanServiceTest {
         materialMap.put("materialId", 1L);
         materialMap.put("quantity", 2);
         materialsUsed.add(materialMap);
-        
+
         // 执行测试
-        MaintenanceItem completedItem = repairmanService.completeMaintenanceItem(1L, 1L, result, workingHours, materialsUsed);
-        
+        MaintenanceItem completedItem = repairmanService.completeMaintenanceItem(1L, 1L, result, workingHours,
+                materialsUsed);
+
         // 验证结果
         assertNotNull(completedItem);
         assertEquals(MaintenanceStatus.COMPLETED, completedItem.getStatus());
@@ -361,23 +356,23 @@ class RepairmanServiceTest {
         item1.setStatus(MaintenanceStatus.COMPLETED);
         item1.setLaborCost(160.0);
         item1.setCompleteTime(LocalDateTime.now());
-        
+
         MaintenanceItem item2 = new MaintenanceItem();
         item2.setItemId(2L);
         item2.setStatus(MaintenanceStatus.COMPLETED);
         item2.setLaborCost(240.0);
         item2.setCompleteTime(LocalDateTime.now());
-        
+
         List<MaintenanceItem> items = Arrays.asList(item1, item2);
         testRepairman.setMaintenanceItems(items);
         testRepairman.setType(RepairmanType.MECHANIC);
-        
+
         // 模拟
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
-        
+
         // 执行
         Map<String, Object> result = repairmanService.calculateIncome(1L, null, null);
-        
+
         // 验证
         assertNotNull(result);
         assertEquals(400.0, result.get("totalIncome"));
@@ -389,57 +384,61 @@ class RepairmanServiceTest {
     @Test
     void initializeDefaultSalaries_Success() {
         doNothing().when(salaryRepository).insertDefaultSalaries();
-        
+
         repairmanService.initializeDefaultSalaries();
-        
+
         verify(salaryRepository).insertDefaultSalaries();
     }
-    
+
     // 测试根据工种类型获取薪资标准
     @Test
     void getSalaryByType_Success() {
         when(salaryRepository.findByType(RepairmanType.MECHANIC)).thenReturn(testSalary);
-        
+
         Salary result = repairmanService.getSalaryByType(RepairmanType.MECHANIC);
-        
+
         assertNotNull(result);
         assertEquals(RepairmanType.MECHANIC, result.getType());
         assertEquals(80.0f, result.getHourlyRate());
         verify(salaryRepository).findByType(RepairmanType.MECHANIC);
     }
-    
+
     // 测试设置维修人员薪资标准
     @Test
     void setRepairmanSalary_Success() {
         when(repairmanRepository.findById(1L)).thenReturn(Optional.of(testRepairman));
-        when(salaryRepository.findByType(RepairmanType.ELECTRICIAN)).thenReturn(new Salary() {{
-            setType(RepairmanType.ELECTRICIAN);
-            setHourlyRate(60.0f);
-        }});
+        when(salaryRepository.findByType(RepairmanType.ELECTRICIAN)).thenReturn(new Salary() {
+            {
+                setType(RepairmanType.ELECTRICIAN);
+                setHourlyRate(60.0f);
+            }
+        });
         when(repairmanRepository.save(any(Repairman.class))).thenReturn(testRepairman);
-        
+
         Repairman result = repairmanService.setRepairmanSalary(1L, RepairmanType.ELECTRICIAN);
-        
+
         assertNotNull(result);
         assertEquals(RepairmanType.ELECTRICIAN, testRepairman.getType());
         verify(repairmanRepository).findById(1L);
         verify(salaryRepository).findByType(RepairmanType.ELECTRICIAN);
         verify(repairmanRepository).save(testRepairman);
     }
-    
+
     // 测试更新工种薪资标准
     @Test
     void updateSalaryStandard_Success() {
         String typeStr = RepairmanType.MECHANIC.name();
         when(salaryRepository.existsByType(typeStr)).thenReturn(true);
         when(salaryRepository.updateSalary(eq(typeStr), anyFloat())).thenReturn(1);
-        when(salaryRepository.findByType(RepairmanType.MECHANIC)).thenReturn(new Salary() {{
-            setType(RepairmanType.MECHANIC);
-            setHourlyRate(90.0f);
-        }});
-        
+        when(salaryRepository.findByType(RepairmanType.MECHANIC)).thenReturn(new Salary() {
+            {
+                setType(RepairmanType.MECHANIC);
+                setHourlyRate(90.0f);
+            }
+        });
+
         Salary result = repairmanService.updateSalaryStandard(RepairmanType.MECHANIC, 90.0f);
-        
+
         assertNotNull(result);
         assertEquals(RepairmanType.MECHANIC, result.getType());
         assertEquals(90.0f, result.getHourlyRate());
@@ -447,7 +446,7 @@ class RepairmanServiceTest {
         verify(salaryRepository).updateSalary(typeStr, 90.0f);
         verify(salaryRepository).findByType(RepairmanType.MECHANIC);
     }
-    
+
     // 测试薪资为空时的注册
     @Test
     void register_WithNullSalary_Success() {
@@ -457,19 +456,19 @@ class RepairmanServiceTest {
         newRepairman.setName("New User");
         newRepairman.setGender("男");
         newRepairman.setType(RepairmanType.APPRENTICE);
-        
+
         when(repairmanRepository.existsByUsername(anyString())).thenReturn(false);
         when(repairmanRepository.save(any(Repairman.class))).thenReturn(newRepairman);
         // 无论调用多少次都返回null
         when(salaryRepository.findByType(RepairmanType.APPRENTICE)).thenReturn(null);
         doNothing().when(salaryRepository).insertDefaultSalaries();
-        
+
         Repairman result = repairmanService.register(newRepairman);
-        
+
         assertNotNull(result);
         assertEquals(RepairmanType.APPRENTICE, result.getType());
         verify(salaryRepository).insertDefaultSalaries();
         verify(salaryRepository, times(2)).findByType(RepairmanType.APPRENTICE);
         verify(repairmanRepository, times(2)).save(any(Repairman.class)); // 一次初始save，一次设置默认薪资
     }
-} 
+}

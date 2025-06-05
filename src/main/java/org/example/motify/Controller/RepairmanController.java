@@ -10,11 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
-import java.util.HashMap;
-
 
 @RestController
-@RequestMapping({"/api/repairman", "/api/repairmen"})
+@RequestMapping({ "/api/repairman", "/api/repairmen" })
 public class RepairmanController {
     @Autowired
     private RepairmanService repairmanService;
@@ -151,15 +149,53 @@ public class RepairmanController {
         String result = (String) payload.get("result");
         Double workingHours = Double.valueOf(payload.get("workingHours").toString());
         List<Map<String, Object>> materialsUsed = (List<Map<String, Object>>) payload.get("materials");
-        
-        MaintenanceItem item = repairmanService.completeMaintenanceItem(repairmanId, itemId, result, workingHours, materialsUsed);
+
+        MaintenanceItem item = repairmanService.completeMaintenanceItem(repairmanId, itemId, result, workingHours,
+                materialsUsed);
         return ExceptionLogger.createSuccessResponse(item);
+    }
+
+    /**
+     * 添加维修记录（MaintenanceRecord）。
+     * <p>
+     * 维修人员每次维修后调用此接口，记录本次维修的内容、工时、开始时间及所用材料。
+     * <br>
+     * 前端可传递 name 字段作为记录名称，若未传递则后端自动生成。
+     * <br>
+     * 材料用量通过 materials 字段传递，为 List<Map>，每个 map 包含 materialId 和 amount。
+     *
+     * <b>请求示例：</b>
+     * 
+     * <pre>
+     * {
+     *   "maintenanceItemId": 3,
+     *   "description": "补胎",
+     *   "repairmanId": 1,
+     *   "workHours": 1,
+     *   "startTime": "2024-06-02T10:00:00",
+     *   "name": "补胎记录", // 可选
+     *   "materials": [
+     *     {"materialId": 9, "amount": 1},
+     *     {"materialId": 10, "amount": 1}
+     *   ]
+     * }
+     * </pre>
+     *
+     * @param payload 包含维修记录信息的 Map，详见上方示例
+     * @return 新增的 MaintenanceRecord 对象，封装在统一响应结构中
+     */
+    @PostMapping("/maintenance-records/add")
+    public ResponseEntity<?> addMaintenanceRecord(@RequestBody Map<String, Object> payload) {
+        MaintenanceRecord record = repairmanService.addMaintenanceRecord(payload);
+        return ExceptionLogger.createSuccessResponse(record);
     }
 
     // 示例：获取工单材料及用量
     // @GetMapping("/maintenance-items/{itemId}/materials")
-    // public Map<Material, Integer> getMaterialsWithAmount(@PathVariable Long itemId) {
-    //     MaintenanceItem item = maintenanceItemRepository.findById(itemId).orElseThrow(...);
-    //     return item.getMaterials();
+    // public Map<Material, Integer> getMaterialsWithAmount(@PathVariable Long
+    // itemId) {
+    // MaintenanceItem item =
+    // maintenanceItemRepository.findById(itemId).orElseThrow(...);
+    // return item.getMaterials();
     // }
 }

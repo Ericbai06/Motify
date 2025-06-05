@@ -122,14 +122,14 @@ INSERT INTO item_repairman (item_id, repairman_id) VALUES
 ALTER TABLE maintenance_records AUTO_INCREMENT = 1;
 
 -- 9. 填充维修记录数据
-INSERT INTO maintenance_records (name, description, cost, repair_man_id, work_hours, item_id) VALUES
-('更换机油机滤', '更换5W-30机油和机油滤芯', 378.0, 1, 2, 1),
-('更换空气滤芯', '更换高效空气滤清器', 45.0, 2, 1, 1),
-('更换前刹车片', '更换陶瓷前刹车片', 300.0, 3, 2, 2),
-('更换米其林轮胎', '更换四条225/60R16轮胎', 2920.0, 1, 4, 3),
-('更换汽车电池', '更换瓦尔塔12V 60Ah电池', 540.0, 2, 1, 4),
-('变速箱油更换', '更换ATF变速箱油', 460.0, 1, 3, 6),
-('更换大灯灯泡', '更换LED大灯灯泡', 135.0, 6, 1, 7);
+INSERT INTO maintenance_records (name, description, cost, repair_man_id, work_hours, item_id, start_time) VALUES
+('更换机油机滤', '更换5W-30机油和机油滤芯', 378.0, 1, 2, 1, '2024-05-15 09:00:00'),
+('更换空气滤芯', '更换高效空气滤清器', 45.0, 2, 1, 1, '2024-05-15 10:00:00'),
+('更换前刹车片', '更换陶瓷前刹车片', 300.0, 3, 2, 2, '2024-05-20 10:00:00'),
+('更换米其林轮胎', '更换四条225/60R16轮胎', 2920.0, 1, 4, 3, '2024-06-01 08:30:00'),
+('更换汽车电池', '更换瓦尔塔12V 60Ah电池', 540.0, 2, 1, 4, '2024-05-25 14:00:00'),
+('变速箱油更换', '更换ATF变速箱油', 460.0, 1, 3, 6, '2024-06-02 13:00:00'),
+('更换大灯灯泡', '更换LED大灯灯泡', 135.0, 6, 1, 7, '2024-05-28 11:00:00');
 
 -- 10. 填充维修记录-材料关联数据
 INSERT INTO record_material (id, record_id, material_id, amount) VALUES

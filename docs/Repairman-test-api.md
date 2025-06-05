@@ -199,6 +199,38 @@
 
 ---
 
+## 14. 添加维修记录
+
+**POST** `/api/repairman/maintenance-records/add`
+
+```json
+{
+  "maintenanceItemId": 3,
+  "description": "补胎",
+  "repairmanId": 1,
+  "workHours": 1,
+  "startTime": "2024-06-02T10:00:00",
+  "name": "补胎记录", // 可选
+  "materials": [
+    {"materialId": 9, "amount": 1},
+    {"materialId": 10, "amount": 1}
+  ]
+}
+```
+
+- <b>说明：</b> 用于维修人员在每次维修后，记录本次维修的内容、工时、开始时间及所用材料。
+- <b>参数：</b>
+  - maintenanceItemId：维修项目ID（必填）
+  - description：维修内容（必填）
+  - repairmanId：维修人员ID（必填）
+  - workHours：工时（单位：小时，必填）
+  - startTime：维修开始时间（必填，格式：yyyy-MM-ddTHH:mm:ss）
+  - name：维修记录名称（可选，未传则后端自动生成）
+  - materials：材料及用量列表（每项含 materialId 和 amount，必填）
+- <b>返回：</b> 新增的维修记录对象
+
+---
+
 # 完整业务流程测试设计
 
 ## 1. 维修人员端典型业务流
@@ -255,6 +287,11 @@
 11. **查询收入统计**
     - GET `/api/repairman/1/income?startDate=2024-05-01&endDate=2024-06-30`
     - 预期：返回 200，包含收入统计数据
+
+12. **添加维修记录**
+    - POST `/api/repairman/maintenance-records/add`
+    - body: `{ "maintenanceItemId": 3, "description": "补胎", "repairmanId": 1, "workHours": 1, "startTime": "2024-06-02T10:00:00", "materials": [{ "materialId": 9, "amount": 1 }] }`
+    - 预期：返回 200，包含新建的维修记录信息
 
 ---
 

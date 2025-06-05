@@ -29,8 +29,6 @@ public class RepairmanService {
     @Autowired
     private final MaterialRepository materialRepository;
     @Autowired
-    private final CarRepository carRepository;
-    @Autowired
     private final MaintenanceRecordRepository maintenanceRecordRepository;
     @Autowired
     private final RecordMaterialRepository recordMaterialRepository;
@@ -53,15 +51,15 @@ public class RepairmanService {
     public Repairman setRepairmanSalary(Long repairmanId, RepairmanType type) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        
+
         Salary salary = salaryRepository.findByType(type);
         if (salary == null) {
             throw new ResourceNotFoundException("Salary", "type", type);
         }
-        
+
         repairman.setType(type);
         repairman.setHourlyRate(salary.getHourlyRate());
-        
+
         return repairmanRepository.save(repairman);
     }
 
@@ -71,16 +69,16 @@ public class RepairmanService {
         if (hourlyRate <= 0) {
             throw new BadRequestException("时薪必须大于0");
         }
-        
+
         String typeStr = type.name();
         boolean exists = salaryRepository.existsByType(typeStr);
-        
+
         if (exists) {
             salaryRepository.updateSalary(typeStr, hourlyRate);
         } else {
             salaryRepository.insertSalary(typeStr, hourlyRate);
         }
-        
+
         return salaryRepository.findByType(type);
     }
 
@@ -90,12 +88,12 @@ public class RepairmanService {
         if (hourlyRate <= 0) {
             throw new BadRequestException("时薪必须大于0");
         }
-        
+
         String typeStr = type.name();
         if (salaryRepository.existsByType(typeStr)) {
             throw new BadRequestException("该工种薪资标准已存在");
         }
-        
+
         salaryRepository.insertSalary(typeStr, hourlyRate);
         return salaryRepository.findByType(type);
     }
@@ -108,7 +106,7 @@ public class RepairmanService {
             // 如果没有找到对应的薪资标准，初始化默认薪资标准
             initializeDefaultSalaries();
             salary = salaryRepository.findByType(defaultType);
-            
+
             // 如果仍然没有找到，使用一个固定的默认值
             if (salary == null) {
                 repairman.setHourlyRate(50.0f); // 默认时薪
@@ -116,7 +114,7 @@ public class RepairmanService {
                 return repairmanRepository.save(repairman);
             }
         }
-        
+
         repairman.setType(defaultType);
         repairman.setHourlyRate(salary.getHourlyRate());
         return repairmanRepository.save(repairman);
@@ -139,18 +137,18 @@ public class RepairmanService {
         if (repairmanRepository.existsByUsername(repairman.getUsername())) {
             throw new BadRequestException("用户名已存在");
         }
-        
+
         repairman.setPassword(PasswordEncoder.encode(repairman.getPassword()));
-        
+
         // 如果没有指定工种类型，设置为学徒
         RepairmanType type = repairman.getType();
         if (type == null) {
             type = RepairmanType.APPRENTICE;
         }
-        
+
         // 保存基本信息
         Repairman savedRepairman = repairmanRepository.save(repairman);
-        
+
         // 设置薪资信息
         return setDefaultSalaryForNewRepairman(savedRepairman, type);
     }
@@ -288,7 +286,22 @@ public class RepairmanService {
         item.setStatus(MaintenanceStatus.ACCEPTED);
         item.setProgress(0);
         item.setUpdateTime(java.time.LocalDateTime.now());
-        return maintenanceItemRepository.save(item);
+
+        // 保存更新后的工单
+        MaintenanceItem updatedItem = maintenanceItemRepository.save(item);
+
+        // 创建维修记录，记录开始时间
+        MaintenanceRecord record = new MaintenanceRecord();
+        record.setMaintenanceItem(updatedItem);
+        record.setName("开始维修：" + updatedItem.getName());
+        record.setDescription("维修人员" + repairman.getName() + "开始处理工单");
+        record.setCost(0.0); // 初始费用为0
+        record.setRepairManId(repairmanId);
+        record.setWorkHours(0); // 初始工作时间为0
+        record.setStartTime(LocalDateTime.now()); // 设置开始时间
+        maintenanceRecordRepository.save(record);
+
+        return updatedItem;
     }
 
     // 以维修记录为例，统计材料费用
@@ -296,9 +309,18 @@ public class RepairmanService {
         if (record.getMaterialAmounts() == null || record.getMaterialAmounts().isEmpty()) {
             return 0.0;
         }
-        return record.getMaterialAmounts().entrySet().stream()
-                .mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue())
-                .sum();
+        double totalCost = 0.0;
+        for (Map.Entry<Long, Integer> entry : record.getMaterialAmounts().entrySet()) {
+            Long materialId = entry.getKey();
+            Integer quantity = entry.getValue();
+
+            // 根据材料ID查询材料对象
+            Material material = materialRepository.findById(materialId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Material", "id", materialId));
+
+            totalCost += material.getPrice() * quantity;
+        }
+        return totalCost;
     }
 
     // 拒绝维修工单
@@ -321,7 +343,8 @@ public class RepairmanService {
     }
 
     // 更新维修进度
-    public MaintenanceItem updateMaintenanceProgress(Long repairmanId, Long itemId, Integer progress, String description) {
+    public MaintenanceItem updateMaintenanceProgress(Long repairmanId, Long itemId, Integer progress,
+            String description) {
         // 确认维修人员存在
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
@@ -351,8 +374,8 @@ public class RepairmanService {
 
     // 完成维修工单
     @Transactional
-    public MaintenanceItem completeMaintenanceItem(Long repairmanId, Long itemId, String result, 
-                                                  Double workingHours, List<Map<String, Object>> materialsUsed) {
+    public MaintenanceItem completeMaintenanceItem(Long repairmanId, Long itemId, String result,
+            Double workingHours, List<Map<String, Object>> materialsUsed) {
         // 确认维修人员存在
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
@@ -372,17 +395,17 @@ public class RepairmanService {
             for (Map<String, Object> materialInfo : materialsUsed) {
                 Long materialId = Long.valueOf(materialInfo.get("materialId").toString());
                 Integer quantity = (Integer) materialInfo.get("quantity");
-                
+
                 Material material = materialRepository.findById(materialId)
                         .orElseThrow(() -> new ResourceNotFoundException("Material", "id", materialId));
-                
+
                 if (material.getStock() < quantity) {
                     throw new BadRequestException("材料 " + material.getName() + " 库存不足");
                 }
-                
+
                 material.setStock(material.getStock() - quantity);
                 materialRepository.save(material);
-                
+
                 materialCost += material.getPrice() * quantity;
             }
         }
@@ -400,10 +423,10 @@ public class RepairmanService {
         item.setCost(materialCost + laborCost);
         item.setCompleteTime(java.time.LocalDateTime.now());
         item.setUpdateTime(java.time.LocalDateTime.now());
-        
+
         // 保存工单更新
         MaintenanceItem updatedItem = maintenanceItemRepository.save(item);
-        
+
         // 创建维修记录
         MaintenanceRecord record = new MaintenanceRecord();
         record.setMaintenanceItem(updatedItem);
@@ -413,14 +436,16 @@ public class RepairmanService {
         record.setRepairManId(repairmanId);
         // 将小时转换为分钟
         record.setWorkHours(Math.round(workingHours * 60));
+        // 设置开始时间 - 从当前时间减去工作时长
+        record.setStartTime(LocalDateTime.now());
         MaintenanceRecord savedRecord = maintenanceRecordRepository.save(record);
-        
+
         // 对每个材料创建记录
         if (materialsUsed != null) {
             for (Map<String, Object> materialInfo : materialsUsed) {
                 Long materialId = Long.valueOf(materialInfo.get("materialId").toString());
                 Integer quantity = (Integer) materialInfo.get("quantity");
-                
+
                 // 创建材料使用记录
                 RecordMaterial recordMaterial = new RecordMaterial();
                 // 不再设置 id，使用数据库的自动递增功能
@@ -442,7 +467,7 @@ public class RepairmanService {
 
         java.time.LocalDateTime startDate;
         java.time.LocalDateTime endDate;
-        
+
         if (startDateStr != null && !startDateStr.isEmpty()) {
             startDate = java.time.LocalDate.parse(startDateStr).atStartOfDay();
         } else {
@@ -458,28 +483,69 @@ public class RepairmanService {
         if (startDate != null && endDate != null) {
             completedItems = repairman.getMaintenanceItems().stream()
                     .filter(item -> item.getStatus() == MaintenanceStatus.COMPLETED)
-                    .filter(item -> item.getCompleteTime().isAfter(startDate) && item.getCompleteTime().isBefore(endDate))
+                    .filter(item -> item.getCompleteTime().isAfter(startDate)
+                            && item.getCompleteTime().isBefore(endDate))
                     .toList();
         } else {
             completedItems = repairman.getMaintenanceItems().stream()
                     .filter(item -> item.getStatus() == MaintenanceStatus.COMPLETED)
                     .toList();
         }
-        
+
         double totalIncome = completedItems.stream()
                 .mapToDouble(MaintenanceItem::getLaborCost)
                 .sum();
-        
+
         int totalWorkOrders = completedItems.size();
-        
+
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("totalIncome", totalIncome);
         result.put("totalWorkOrders", totalWorkOrders);
         result.put("repairmanName", repairman.getName());
         result.put("repairmanType", repairman.getType());
         result.put("hourlyRate", repairman.getHourlyRate());
-        
+
         return result;
     }
-}
 
+    @Transactional
+    public MaintenanceRecord addMaintenanceRecord(Map<String, Object> payload) {
+        Long maintenanceItemId = Long.valueOf(payload.get("maintenanceItemId").toString());
+        String description = (String) payload.get("description");
+        Long repairmanId = Long.valueOf(payload.get("repairmanId").toString());
+        Integer workHours = Integer.valueOf(payload.get("workHours").toString());
+        LocalDateTime startTime = LocalDateTime.parse(payload.get("startTime").toString());
+
+        MaintenanceItem item = maintenanceItemRepository.findById(maintenanceItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", maintenanceItemId));
+
+        MaintenanceRecord record = new MaintenanceRecord();
+        record.setMaintenanceItem(item);
+        record.setDescription(description);
+        record.setRepairManId(repairmanId);
+        record.setWorkHours(workHours);
+        record.setStartTime(startTime);
+
+        String name = payload.get("name") != null
+                ? payload.get("name").toString()
+                : (description != null ? description : "维修记录") + "-" + startTime.toString();
+        record.setName(name);
+
+        MaintenanceRecord savedRecord = maintenanceRecordRepository.save(record);
+
+        // 处理材料
+        List<Map<String, Object>> materials = (List<Map<String, Object>>) payload.get("materials");
+        if (materials != null) {
+            for (Map<String, Object> mat : materials) {
+                Long materialId = Long.valueOf(mat.get("materialId").toString());
+                Integer amount = Integer.valueOf(mat.get("amount").toString());
+                RecordMaterial rm = new RecordMaterial();
+                rm.setRecordId(savedRecord.getRecordId());
+                rm.setMaterialId(materialId);
+                rm.setAmount(amount);
+                recordMaterialRepository.save(rm);
+            }
+        }
+        return savedRecord;
+    }
+}
