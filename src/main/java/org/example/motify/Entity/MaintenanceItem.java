@@ -64,7 +64,7 @@ public class MaintenanceItem {
     @JoinColumn(name = "car_id", nullable = false)
     private Car car;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id"), inverseJoinColumns = @JoinColumn(name = "repairman_id"))
     private List<Repairman> repairmen;
 
