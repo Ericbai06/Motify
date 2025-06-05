@@ -31,12 +31,12 @@ INSERT INTO salaries (type, hourly_rate) VALUES
 ALTER TABLE repairmen AUTO_INCREMENT = 1;
 
 INSERT INTO repairmen (username, password, name, phone, email, gender, type) VALUES
-('repairman01', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '张师傅', '13800138001', 'zhang@motify.com', '男', 'MECHANIC'),
-('repairman02', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '李师傅', '13800138002', 'li@motify.com', '男', 'ELECTRICIAN'),
-('repairman03', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '王师傅', '13800138003', 'wang@motify.com', '男', 'BODYWORKER'),
-('repairman04', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '赵师傅', '13800138004', 'zhao@motify.com', '男', 'PAINTER'),
-('repairman05', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '刘师傅', '13800138005', 'liu@motify.com', '女', 'APPRENTICE'),
-('repairman06', '$2b$12$5gRJmBxRWEZIA9CXnKNXTOsORuHl/iZq1pbcGJawx3XVCh4f6Qskm', '陈师傅', '13800138006', 'chen@motify.com', '男', 'INSPECTOR');
+('repairman01', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '张师傅', '13800138001', 'zhang@motify.com', '男', 'MECHANIC'),
+('repairman02', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '李师傅', '13800138002', 'li@motify.com', '男', 'ELECTRICIAN'),
+('repairman03', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '王师傅', '13800138003', 'wang@motify.com', '男', 'BODYWORKER'),
+('repairman04', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '赵师傅', '13800138004', 'zhao@motify.com', '男', 'PAINTER'),
+('repairman05', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '刘师傅', '13800138005', 'liu@motify.com', '女', 'APPRENTICE'),
+('repairman06', '91bda28a40ec2eadea4b9ef5d3d5c2f06d552117e3cdf32baebe2f92ff5f16fc', '陈师傅', '13800138006', 'chen@motify.com', '男', 'INSPECTOR');
 
 -- 重置 materials 表自增
 ALTER TABLE materials AUTO_INCREMENT = 1;

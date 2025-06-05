@@ -26,7 +26,7 @@ public class MaintenanceRecord {
     private Long repairManId;  // 创建该维修记录的维修人员ID
 
     @Column(nullable = false)
-    private long workHours;  // 工作时长（单位：小时）
+    private long workHours;  // 工作时长（单位：分钟）
 
 
 

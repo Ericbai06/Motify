@@ -2,7 +2,8 @@ package org.example.motify.Controller;
 
 import org.example.motify.Entity.MaintenanceItem;
 import org.example.motify.Entity.Repairman;
-import org.example.motify.Entity.RepairmanType;
+import org.example.motify.Enum.MaintenanceStatus;
+import org.example.motify.Enum.RepairmanType;
 import org.example.motify.Service.RepairmanService;
 import org.example.motify.Exception.BadRequestException;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,8 +15,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -57,8 +61,9 @@ class RepairmanControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.repairmanId").value(1L))
-                .andExpect(jsonPath("$.username").value("testuser"));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.repairmanId").value(1L))
+                .andExpect(jsonPath("$.data.username").value("testuser"));
     }
 
     @Test
@@ -88,8 +93,9 @@ class RepairmanControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.repairmanId").value(1L))
-                .andExpect(jsonPath("$.username").value("testuser"));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.repairmanId").value(1L))
+                .andExpect(jsonPath("$.data.username").value("testuser"));
     }
 
     @Test
@@ -113,7 +119,8 @@ class RepairmanControllerTest {
         mockMvc.perform(post("/api/repairman/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -124,8 +131,9 @@ class RepairmanControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.repairmanId").value(1L))
-                .andExpect(jsonPath("$.username").value("testuser"));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.repairmanId").value(1L))
+                .andExpect(jsonPath("$.data.username").value("testuser"));
     }
 
     @Test
@@ -154,8 +162,9 @@ class RepairmanControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.repairmanId").value(1L))
-                .andExpect(jsonPath("$.username").value("testuser"));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.repairmanId").value(1L))
+                .andExpect(jsonPath("$.data.username").value("testuser"));
     }
 
     @Test
@@ -203,7 +212,8 @@ class RepairmanControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data", org.hamcrest.Matchers.hasSize(2)));
     }
 
     @Test
@@ -227,8 +237,9 @@ class RepairmanControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itemId").value(1L))
-                .andExpect(jsonPath("$.name").value("测试工单"));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(1L))
+                .andExpect(jsonPath("$.data.name").value("测试工单"));
     }
 
     @Test
@@ -242,10 +253,86 @@ class RepairmanControllerTest {
     }
 
     @Test
+    void getCurrentRecords_Success() throws Exception {
+        java.util.List<MaintenanceItem> items = java.util.Arrays.asList(new MaintenanceItem(), new MaintenanceItem());
+        when(repairmanService.getRepairmanCurrentRecords(eq(1L))).thenReturn(items);
+        String json = "{\"repairmanId\":1}";
+        mockMvc.perform(post("/api/repairman/current-records")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data", org.hamcrest.Matchers.hasSize(2)));
+    }
+
+    @Test
+    void getCurrentRecords_NotFound() throws Exception {
+        when(repairmanService.getRepairmanCurrentRecords(eq(1L))).thenThrow(new org.example.motify.Exception.ResourceNotFoundException("未找到"));
+        String json = "{\"repairmanId\":1}";
+        mockMvc.perform(post("/api/repairman/current-records")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getCompletedRecords_Success() throws Exception {
+        java.util.List<MaintenanceItem> items = java.util.Arrays.asList(new MaintenanceItem(), new MaintenanceItem());
+        when(repairmanService.getRepairmanCompletedRecords(eq(1L))).thenReturn(items);
+        String json = "{\"repairmanId\":1}";
+        mockMvc.perform(post("/api/repairman/completed-records")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data", org.hamcrest.Matchers.hasSize(2)));
+    }
+
+    @Test
+    void getCompletedRecords_NotFound() throws Exception {
+        when(repairmanService.getRepairmanCompletedRecords(eq(1L))).thenThrow(new org.example.motify.Exception.ResourceNotFoundException("未找到"));
+        String json = "{\"repairmanId\":1}";
+        mockMvc.perform(post("/api/repairman/completed-records")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateMaintenanceProgress_Success() throws Exception {
+        MaintenanceItem item = new MaintenanceItem();
+        item.setItemId(1L);
+        item.setProgress(50);
+        when(repairmanService.updateMaintenanceProgress(eq(1L), eq(1L), eq(50), eq("进度更新"))).thenReturn(item);
+        String json = "{\"progress\":50,\"description\":\"进度更新\"}";
+        mockMvc.perform(put("/api/repairman/1/maintenance-items/1/progress")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(1L))
+                .andExpect(jsonPath("$.data.progress").value(50));
+    }
+
+    @Test
+    void updateMaintenanceProgress_BadRequest() throws Exception {
+        when(repairmanService.updateMaintenanceProgress(eq(1L), eq(1L), eq(150), anyString()))
+                .thenThrow(new BadRequestException("维修进度必须在0-100之间"));
+        
+        String json = "{\"progress\":150,\"description\":\"无效进度\"}";
+        mockMvc.perform(put("/api/repairman/1/maintenance-items/1/progress")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("维修进度必须在0-100之间"));
+    }
+
+    @Test
     void acceptMaintenanceItem_Success() throws Exception {
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(1L);
-        item.setName("测试工单");
+        item.setStatus(MaintenanceStatus.ACCEPTED);
         when(repairmanService.acceptMaintenanceItem(eq(1L), eq(1L))).thenReturn(item);
         String json = "{\"repairmanId\":1,\"itemId\":1}";
         mockMvc.perform(post("/api/repairman/maintenance-items/accept")
@@ -253,8 +340,8 @@ class RepairmanControllerTest {
                         .content(json))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data.itemId").value(1L));
+                .andExpect(jsonPath("$.data.itemId").value(1L))
+                .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
     }
 
     @Test
@@ -280,46 +367,58 @@ class RepairmanControllerTest {
     }
 
     @Test
-    void getCurrentRecords_Success() throws Exception {
-        java.util.List<MaintenanceItem> records = java.util.Arrays.asList(new MaintenanceItem(), new MaintenanceItem());
-        when(repairmanService.getRepairmanCurrentRecords(eq(1L))).thenReturn(records);
-        String json = "{\"repairmanId\":1}";
-        mockMvc.perform(post("/api/repairman/current-records")
+    void rejectMaintenanceItem_Success() throws Exception {
+        MaintenanceItem item = new MaintenanceItem();
+        item.setItemId(1L);
+        item.setStatus(MaintenanceStatus.CANCELLED);
+        when(repairmanService.rejectMaintenanceItem(eq(1L), eq(1L), eq("太忙了"))).thenReturn(item);
+        String json = "{\"reason\":\"太忙了\"}";
+        mockMvc.perform(post("/api/repairman/1/maintenance-items/1/reject")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(1L))
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
     }
 
     @Test
-    void getCurrentRecords_NotFound() throws Exception {
-        when(repairmanService.getRepairmanCurrentRecords(eq(1L))).thenThrow(new org.example.motify.Exception.ResourceNotFoundException("未找到"));
-        String json = "{\"repairmanId\":1}";
-        mockMvc.perform(post("/api/repairman/current-records")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getCompletedRecords_Success() throws Exception {
-        java.util.List<MaintenanceItem> records = java.util.Arrays.asList(new MaintenanceItem(), new MaintenanceItem());
-        when(repairmanService.getRepairmanCompletedRecords(eq(1L))).thenReturn(records);
-        String json = "{\"repairmanId\":1}";
-        mockMvc.perform(post("/api/repairman/completed-records")
+    void completeMaintenanceItem_Success() throws Exception {
+        MaintenanceItem item = new MaintenanceItem();
+        item.setItemId(1L);
+        item.setStatus(MaintenanceStatus.COMPLETED);
+        item.setProgress(100);
+        
+        Map<String, Object> material = new HashMap<>();
+        material.put("materialId", 1L);
+        material.put("quantity", 2);
+        java.util.List<Map<String, Object>> materials = java.util.Arrays.asList(material);
+        
+        when(repairmanService.completeMaintenanceItem(eq(1L), eq(1L), eq("完成维修"), eq(2.0), anyList())).thenReturn(item);
+        
+        String json = "{\"result\":\"完成维修\",\"workingHours\":2.0,\"materials\":[{\"materialId\":1,\"quantity\":2}]}";
+        mockMvc.perform(post("/api/repairman/1/maintenance-items/1/complete")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(1L))
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.progress").value(100));
     }
 
     @Test
-    void getCompletedRecords_NotFound() throws Exception {
-        when(repairmanService.getRepairmanCompletedRecords(eq(1L))).thenThrow(new org.example.motify.Exception.ResourceNotFoundException("未找到"));
-        String json = "{\"repairmanId\":1}";
-        mockMvc.perform(post("/api/repairman/completed-records")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isNotFound());
+    void getIncomeStatistics_Success() throws Exception {
+        Map<String, Object> incomeData = new HashMap<>();
+        incomeData.put("totalIncome", 1000.0);
+        incomeData.put("totalWorkOrders", 5);
+        
+        when(repairmanService.calculateIncome(eq(1L), eq("2023-01-01"), eq("2023-12-31"))).thenReturn(incomeData);
+        
+        mockMvc.perform(get("/api/repairman/1/income?startDate=2023-01-01&endDate=2023-12-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.totalIncome").value(1000.0))
+                .andExpect(jsonPath("$.data.totalWorkOrders").value(5));
     }
 }

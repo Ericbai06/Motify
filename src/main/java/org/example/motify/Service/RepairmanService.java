@@ -7,6 +7,7 @@ import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
 import org.example.motify.util.PasswordEncoder;
 import org.example.motify.Enum.MaintenanceStatus;
+import org.example.motify.Enum.RepairmanType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,99 @@ public class RepairmanService {
     private final MaterialRepository materialRepository;
     @Autowired
     private final CarRepository carRepository;
+    @Autowired
+    private final MaintenanceRecordRepository maintenanceRecordRepository;
+    @Autowired
+    private final RecordMaterialRepository recordMaterialRepository;
+    @Autowired
+    private final SalaryRepository salaryRepository;
 
+    // 初始化默认薪资标准
+    @Transactional
+    public void initializeDefaultSalaries() {
+        salaryRepository.insertDefaultSalaries();
+    }
+
+    // 根据工种类型获取薪资标准
+    public Salary getSalaryByType(RepairmanType type) {
+        return salaryRepository.findByType(type);
+    }
+
+    // 设置维修人员的薪资标准
+    @Transactional
+    public Repairman setRepairmanSalary(Long repairmanId, RepairmanType type) {
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+        
+        Salary salary = salaryRepository.findByType(type);
+        if (salary == null) {
+            throw new ResourceNotFoundException("Salary", "type", type);
+        }
+        
+        repairman.setType(type);
+        repairman.setHourlyRate(salary.getHourlyRate());
+        
+        return repairmanRepository.save(repairman);
+    }
+
+    // 更新特定工种的薪资标准
+    @Transactional
+    public Salary updateSalaryStandard(RepairmanType type, Float hourlyRate) {
+        if (hourlyRate <= 0) {
+            throw new BadRequestException("时薪必须大于0");
+        }
+        
+        String typeStr = type.name();
+        boolean exists = salaryRepository.existsByType(typeStr);
+        
+        if (exists) {
+            salaryRepository.updateSalary(typeStr, hourlyRate);
+        } else {
+            salaryRepository.insertSalary(typeStr, hourlyRate);
+        }
+        
+        return salaryRepository.findByType(type);
+    }
+
+    // 添加工种和对应的薪资标准
+    @Transactional
+    public Salary addSalaryStandard(RepairmanType type, Float hourlyRate) {
+        if (hourlyRate <= 0) {
+            throw new BadRequestException("时薪必须大于0");
+        }
+        
+        String typeStr = type.name();
+        if (salaryRepository.existsByType(typeStr)) {
+            throw new BadRequestException("该工种薪资标准已存在");
+        }
+        
+        salaryRepository.insertSalary(typeStr, hourlyRate);
+        return salaryRepository.findByType(type);
+    }
+
+    // 为新注册的维修人员设置默认工种和薪资
+    @Transactional
+    public Repairman setDefaultSalaryForNewRepairman(Repairman repairman, RepairmanType defaultType) {
+        Salary salary = salaryRepository.findByType(defaultType);
+        if (salary == null) {
+            // 如果没有找到对应的薪资标准，初始化默认薪资标准
+            initializeDefaultSalaries();
+            salary = salaryRepository.findByType(defaultType);
+            
+            // 如果仍然没有找到，使用一个固定的默认值
+            if (salary == null) {
+                repairman.setHourlyRate(50.0f); // 默认时薪
+                repairman.setType(defaultType);
+                return repairmanRepository.save(repairman);
+            }
+        }
+        
+        repairman.setType(defaultType);
+        repairman.setHourlyRate(salary.getHourlyRate());
+        return repairmanRepository.save(repairman);
+    }
+
+    // 修改现有的register方法，增加设置默认薪资
     public Repairman register(Repairman repairman) {
         if (repairman.getUsername() == null || repairman.getUsername().trim().isEmpty()) {
             throw new BadRequestException("用户名不能为空");
@@ -46,8 +139,20 @@ public class RepairmanService {
         if (repairmanRepository.existsByUsername(repairman.getUsername())) {
             throw new BadRequestException("用户名已存在");
         }
+        
         repairman.setPassword(PasswordEncoder.encode(repairman.getPassword()));
-        return repairmanRepository.save(repairman);
+        
+        // 如果没有指定工种类型，设置为学徒
+        RepairmanType type = repairman.getType();
+        if (type == null) {
+            type = RepairmanType.APPRENTICE;
+        }
+        
+        // 保存基本信息
+        Repairman savedRepairman = repairmanRepository.save(repairman);
+        
+        // 设置薪资信息
+        return setDefaultSalaryForNewRepairman(savedRepairman, type);
     }
 
     @Transactional(readOnly = true)
@@ -76,6 +181,7 @@ public class RepairmanService {
         // 打印密码信息，便于调试（生产环境请移除这些敏感信息的打印）
         System.out.println("输入的密码: " + password);
         System.out.println("存储的加密密码: " + storedPassword);
+        System.out.println("加密的密码: " + PasswordEncoder.encode(password));
 
         boolean passwordMatches = PasswordEncoder.matches(password, storedPassword);
         System.out.println("密码验证结果: " + (passwordMatches ? "成功" : "失败"));
@@ -112,79 +218,6 @@ public class RepairmanService {
         return repairman.getMaintenanceItems();
     }
 
-    // public MaintenanceItem updateMaintenanceItem(Long recordId, MaintenanceItem record) {
-    //     if (recordId == null) {
-    //         throw new BadRequestException("维修记录ID不能为空");
-    //     }
-    //     MaintenanceItem existingRecord = maintenanceItemRepository.findById(recordId)
-    //             .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", recordId));
-        
-    //     // 更新维修进度
-    //     if (record.getProgress() != null) {
-    //         if (record.getProgress() < 0 || record.getProgress() > 100) {
-    //             throw new BadRequestException("维修进度必须在0-100之间");
-    //         }
-    //         existingRecord.setProgress(record.getProgress());
-    //     }
-        
-    //     // 更新维修结果
-    //     if (record.getResult() != null) {
-    //         existingRecord.setResult(record.getResult());
-    //     }
-        
-    //     // 更新备注
-    //     if (record.getReminder() != null) {
-    //         existingRecord.setReminder(record.getReminder());
-    //     }
-
-    //     // 更新材料使用情况
-    //     if (record.getMaintenanceRecords() != null) {
-    //         for (MaintenanceRecord maintenanceRecord : record.getMaintenanceRecords()) {
-    //             if (maintenanceRecord.getMaterialAmounts() != null) {
-    //                 for (Map.Entry<Material, Integer> entry : maintenanceRecord.getMaterialAmounts().entrySet()) {
-    //                     Material material = entry.getKey();
-    //                     Integer amount = entry.getValue();
-                        
-    //                     // 检查库存
-    //                     if (material.getStock() < amount) {
-    //                         throw new BadRequestException("材料 " + material.getName() + " 库存不足");
-    //                     }
-                        
-    //                     // 更新库存
-    //                     material.setStock(material.getStock() - amount);
-    //                     materialRepository.save(material);
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     // 更新费用信息
-    //     RecordInfo recordInfo = new RecordInfo();
-    //     recordInfo.setMaintenanceItem(existingRecord);
-        
-    //     // 计算材料费用
-    //     double materialCost = record.getMaintenanceRecords().stream()
-    //             .mapToDouble(MaintenanceRecord::calculateMaterialCost)
-    //             .sum();
-    //     recordInfo.setMaterialCost(materialCost);
-
-    //     // 计算工时费用
-    //     double laborCost = record.getRepairmen().stream()
-    //             .mapToDouble(repairman -> repairman.getHourlyRate() * record.getWorkHours())
-    //             .sum();
-    //     recordInfo.setLaborCost(laborCost);
-        
-    //     recordInfo.setUpdateTime(LocalDateTime.now());
-        
-    //     // 添加到记录信息列表
-    //     if (existingRecord.getRecordInfos() == null) {
-    //         existingRecord.setRecordInfos(new java.util.ArrayList<>());
-    //     }
-    //     existingRecord.getRecordInfos().add(recordInfo);
-        
-    //     return maintenanceItemRepository.save(existingRecord);
-    // }
-
     public MaintenanceItem saveMaintenanceItem(MaintenanceItem record) {
         if (record.getCar() == null || record.getCar().getCarId() == null) {
             throw new BadRequestException("车辆信息不能为空");
@@ -215,18 +248,6 @@ public class RepairmanService {
                 .filter(record -> record.getProgress() == 100)
                 .toList();
     }
-
-    // @Transactional(readOnly = true)
-    // public double calculateTotalIncome(Long repairmanId) {
-    //     Repairman repairman = repairmanRepository.findById(repairmanId)
-    //             .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-    //     return repairman.getMaintenanceItems().stream()
-    //             .filter(record -> record.getProgress() == 100)
-    //             .mapToDouble(record -> record.getRecordInfos().stream()
-    //                     .mapToDouble(RecordInfo::getTotalAmount)
-    //                     .sum())
-    //             .sum();
-    // }
 
     public MaintenanceItem acceptMaintenanceItem(Long repairmanId, Long itemId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
@@ -263,5 +284,185 @@ public class RepairmanService {
         return record.getMaterialAmounts().entrySet().stream()
                 .mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue())
                 .sum();
+    }
+
+    // 拒绝维修工单
+    public MaintenanceItem rejectMaintenanceItem(Long repairmanId, Long itemId, String reason) {
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+
+        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+
+        // 验证工单状态，只有PENDING状态可以拒绝
+        if (item.getStatus() != MaintenanceStatus.PENDING) {
+            throw new BadRequestException("工单当前状态不允许拒绝");
+        }
+
+        item.setStatus(MaintenanceStatus.CANCELLED);
+        item.setResult(reason); // 存储拒绝原因
+        item.setUpdateTime(java.time.LocalDateTime.now());
+        return maintenanceItemRepository.save(item);
+    }
+
+    // 更新维修进度
+    public MaintenanceItem updateMaintenanceProgress(Long repairmanId, Long itemId, Integer progress, String description) {
+        // 确认维修人员存在
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+
+        // 确认工单存在
+        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+
+        // 确认工单已被接受并且属于该维修人员
+        if (!item.getRepairmen().contains(repairman)) {
+            throw new BadRequestException("该工单不属于此维修人员");
+        }
+
+        // 验证进度值在有效范围内
+        if (progress < 0 || progress > 100) {
+            throw new BadRequestException("维修进度必须在0-100之间");
+        }
+
+        // 更新进度信息
+        item.setProgress(progress);
+        if (description != null && !description.isEmpty()) {
+            item.setDescription(item.getDescription() + "\n" + description);
+        }
+        item.setUpdateTime(java.time.LocalDateTime.now());
+        return maintenanceItemRepository.save(item);
+    }
+
+    // 完成维修工单
+    @Transactional
+    public MaintenanceItem completeMaintenanceItem(Long repairmanId, Long itemId, String result, 
+                                                  Double workingHours, List<Map<String, Object>> materialsUsed) {
+        // 确认维修人员存在
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+
+        // 确认工单存在
+        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+
+        // 确认工单已被接受并且属于该维修人员
+        if (!item.getRepairmen().contains(repairman)) {
+            throw new BadRequestException("该工单不属于此维修人员");
+        }
+
+        // 计算材料费用并更新库存
+        double materialCost = 0.0;
+        if (materialsUsed != null && !materialsUsed.isEmpty()) {
+            for (Map<String, Object> materialInfo : materialsUsed) {
+                Long materialId = Long.valueOf(materialInfo.get("materialId").toString());
+                Integer quantity = (Integer) materialInfo.get("quantity");
+                
+                Material material = materialRepository.findById(materialId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Material", "id", materialId));
+                
+                if (material.getStock() < quantity) {
+                    throw new BadRequestException("材料 " + material.getName() + " 库存不足");
+                }
+                
+                material.setStock(material.getStock() - quantity);
+                materialRepository.save(material);
+                
+                materialCost += material.getPrice() * quantity;
+            }
+        }
+
+        // 计算工时费
+        Double hourlyRate = repairman.getHourlyRate();
+        double laborCost = hourlyRate * workingHours;
+
+        // 更新工单信息
+        item.setStatus(MaintenanceStatus.COMPLETED);
+        item.setProgress(100);
+        item.setResult(result);
+        item.setMaterialCost(materialCost);
+        item.setLaborCost(laborCost);
+        item.setCost(materialCost + laborCost);
+        item.setCompleteTime(java.time.LocalDateTime.now());
+        item.setUpdateTime(java.time.LocalDateTime.now());
+        
+        // 保存工单更新
+        MaintenanceItem updatedItem = maintenanceItemRepository.save(item);
+        
+        // 创建维修记录
+        MaintenanceRecord record = new MaintenanceRecord();
+        record.setMaintenanceItem(updatedItem);
+        record.setName("完成维修：" + updatedItem.getName());
+        record.setDescription(result);
+        record.setCost(materialCost + laborCost);
+        record.setRepairManId(repairmanId);
+        // 将小时转换为分钟
+        record.setWorkHours(Math.round(workingHours * 60));
+        MaintenanceRecord savedRecord = maintenanceRecordRepository.save(record);
+        
+        // 对每个材料创建记录
+        if (materialsUsed != null) {
+            for (Map<String, Object> materialInfo : materialsUsed) {
+                Long materialId = Long.valueOf(materialInfo.get("materialId").toString());
+                Integer quantity = (Integer) materialInfo.get("quantity");
+                
+                // 创建材料使用记录
+                RecordMaterial recordMaterial = new RecordMaterial();
+                recordMaterial.setRecordId(savedRecord.getRecordId());
+                recordMaterial.setMaterialId(materialId);
+                recordMaterial.setAmount(quantity);
+                recordMaterialRepository.save(recordMaterial);
+            }
+        }
+
+        return updatedItem;
+    }
+
+    // 计算收入统计
+    public Map<String, Object> calculateIncome(Long repairmanId, String startDateStr, String endDateStr) {
+        // 确认维修人员存在
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+
+        java.time.LocalDateTime startDate;
+        java.time.LocalDateTime endDate;
+        
+        if (startDateStr != null && !startDateStr.isEmpty()) {
+            startDate = java.time.LocalDate.parse(startDateStr).atStartOfDay();
+        } else {
+            startDate = null;
+        }
+        if (endDateStr != null && !endDateStr.isEmpty()) {
+            endDate = java.time.LocalDate.parse(endDateStr).atTime(23, 59, 59);
+        } else {
+            endDate = null;
+        }
+
+        List<MaintenanceItem> completedItems;
+        if (startDate != null && endDate != null) {
+            completedItems = repairman.getMaintenanceItems().stream()
+                    .filter(item -> item.getStatus() == MaintenanceStatus.COMPLETED)
+                    .filter(item -> item.getCompleteTime().isAfter(startDate) && item.getCompleteTime().isBefore(endDate))
+                    .toList();
+        } else {
+            completedItems = repairman.getMaintenanceItems().stream()
+                    .filter(item -> item.getStatus() == MaintenanceStatus.COMPLETED)
+                    .toList();
+        }
+        
+        double totalIncome = completedItems.stream()
+                .mapToDouble(MaintenanceItem::getLaborCost)
+                .sum();
+        
+        int totalWorkOrders = completedItems.size();
+        
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("totalIncome", totalIncome);
+        result.put("totalWorkOrders", totalWorkOrders);
+        result.put("repairmanName", repairman.getName());
+        result.put("repairmanType", repairman.getType());
+        result.put("hourlyRate", repairman.getHourlyRate());
+        
+        return result;
     }
 }

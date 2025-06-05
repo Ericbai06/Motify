@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 import org.example.motify.Enum.RepairmanType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Entity
@@ -18,5 +19,6 @@ public class Salary {
     private Float hourlyRate;  // 时薪
 
     @OneToMany(mappedBy = "salary")
+    @JsonIgnore
     private List<Repairman> repairmen;  // 关联的维修人员
-} 
+}

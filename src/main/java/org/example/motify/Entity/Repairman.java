@@ -31,22 +31,30 @@ public class Repairman {
 
     @Column(nullable = false)
     private String gender;  // 性别
+    
+    // 直接定义可设置的枚举类型字段
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type") 
+    private RepairmanType type;  // 工种类型，可写字段
 
-    @ManyToOne
-    @JoinColumn(name = "type", referencedColumnName = "type")
-    private Salary salary; // 工资信息（可写入）
+    // 通过type字段与Salary关联，只读方式
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "type", referencedColumnName = "type", insertable = false, updatable = false)
+    private Salary salary;
 
     @ManyToMany(mappedBy = "repairmen")
     @JsonIgnore
     private List<MaintenanceItem> maintenanceItems;  // 维修项目
 
-    @Column(name = "type", insertable = false, updatable = false)
-    private String type; // 或 private RepairmanType type;
-
     // 获取时薪
     public Double getHourlyRate() {
         return salary != null ? salary.getHourlyRate().doubleValue() : 0.0;
     }
-
-    // 通过 repairman.getSalary().getType() 获取工种
+    
+    // 此方法仅用于API兼容性，实际不修改薪资
+    // 薪资应通过修改type和对应的Salary记录来变更
+    public void setHourlyRate(Float hourlyRate) {
+        // 这个方法不应直接修改工资，因为工资由type关联的Salary决定
+        // 为了兼容API，这里提供一个空实现
+    }
 } 

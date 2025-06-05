@@ -38,9 +38,11 @@ public class ExceptionLogger {
             String errorMessage,
             HttpStatus status) {
         logger.error(errorTitle + ": {}", e.getMessage(), e);
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", status.value());
         response.put("error", errorTitle);
         response.put("message", errorMessage);
+        response.put("data", null);
         return new ResponseEntity<>(response, status);
     }
 
@@ -62,7 +64,11 @@ public class ExceptionLogger {
      * @return 包含数据的ResponseEntity
      */
     public static ResponseEntity<?> createSuccessResponse(Object data) {
-        return ResponseEntity.ok(data);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("message", "success");
+        response.put("data", data);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -72,6 +78,54 @@ public class ExceptionLogger {
      * @return 包含消息的ResponseEntity
      */
     public static ResponseEntity<?> createSuccessMessageResponse(String message) {
-        return ResponseEntity.ok(Collections.singletonMap("message", message));
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("message", message);
+        response.put("data", null);
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 创建参数验证错误响应
+     *
+     * @param fieldErrors 字段错误信息
+     * @return 包含字段错误信息的ResponseEntity
+     */
+    public static ResponseEntity<?> createValidationErrorResponse(Map<String, String> fieldErrors) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 400);
+        response.put("message", "参数验证失败");
+        response.put("data", null);
+        response.put("fieldErrors", fieldErrors);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+    
+    /**
+     * 创建404错误响应
+     *
+     * @param resourceType 资源类型
+     * @param identifier 资源标识符
+     * @return 404错误响应
+     */
+    public static ResponseEntity<?> createNotFoundResponse(String resourceType, Object identifier) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 404);
+        response.put("message", resourceType + " 未找到 (ID: " + identifier + ")");
+        response.put("data", null);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+    
+    /**
+     * 创建认证错误响应
+     *
+     * @param message 错误信息
+     * @return 401错误响应
+     */
+    public static ResponseEntity<?> createAuthenticationErrorResponse(String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 401);
+        response.put("message", message);
+        response.put("data", null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 } 

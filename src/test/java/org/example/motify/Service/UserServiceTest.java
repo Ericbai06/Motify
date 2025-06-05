@@ -1,6 +1,7 @@
 package org.example.motify.Service;
 
 import org.example.motify.Entity.User;
+import org.example.motify.Enum.RepairmanType;
 import org.example.motify.Repository.UserRepository;
 import org.example.motify.Repository.CarRepository;
 import org.example.motify.Repository.MaintenanceItemRepository;
@@ -87,7 +88,7 @@ class UserServiceTest {
         testRepairman.setRepairmanId(1L);
         testRepairman.setUsername("repairman1");
         testRepairman.setName("维修工1");
-        testRepairman.setType("发动机维修");
+        testRepairman.setType(RepairmanType.MECHANIC);
     }
 
     @Test
