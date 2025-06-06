@@ -56,16 +56,14 @@ public class MaintenanceItem {
     private Double laborCost; // 工时费用
 
     @Column(nullable = false)
-    private Double cost
-    ; // 维修总成本
+    private Double cost; // 维修总成本
 
-    
     @ManyToOne
     @JoinColumn(name = "car_id", nullable = false)
     private Car car;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id"), inverseJoinColumns = @JoinColumn(name = "repairman_id"))
+    @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id", foreignKey = @ForeignKey(name = "fk_item_repairman", foreignKeyDefinition = "FOREIGN KEY (item_id) REFERENCES maintenance_items(item_id) ON DELETE CASCADE")), inverseJoinColumns = @JoinColumn(name = "repairman_id"))
     private List<Repairman> repairmen;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)

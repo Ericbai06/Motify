@@ -33,16 +33,18 @@ public class MaintenanceRecord {
     private LocalDateTime startTime; // 维修项目开始时间
 
     @ManyToOne
+    // 配置级联删除：工单删除时自动删除关联的维修记录
     @JoinColumn(name = "item_id", nullable = false, foreignKey = @ForeignKey(name = "fk_record_item", foreignKeyDefinition = "FOREIGN KEY (item_id) REFERENCES maintenance_items(item_id) ON DELETE CASCADE"))
     @JsonIgnore
     private MaintenanceItem maintenanceItem;
 
     @ElementCollection
-    @CollectionTable(name = "record_material", joinColumns = @JoinColumn(name = "record_id"))
-    @MapKeyColumn(name = "material_id") // 使用@MapKeyColumn代替@MapKeyJoinColumn
+    // 配置级联删除：维修记录删除时自动删除关联的材料记录
+    @CollectionTable(name = "record_material", joinColumns = @JoinColumn(name = "record_id", foreignKey = @ForeignKey(name = "fk_record_material", foreignKeyDefinition = "FOREIGN KEY (record_id) REFERENCES maintenance_records(record_id) ON DELETE CASCADE")))
+    @MapKeyColumn(name = "material_id")
     @Column(name = "amount")
     @JsonIgnore
-    private Map<Long, Integer> materialAmounts; // 改为使用材料ID而不是Material对象作为键
+    private Map<Long, Integer> materialAmounts;
 
     // 计算材料总费用 - 需要修改实现逻辑
     public Double calculateMaterialCost() {

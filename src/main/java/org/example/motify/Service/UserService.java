@@ -99,33 +99,157 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }
 
-    /**
-     * 更新用户信息
+    /*
+     * 更新用户信息(暂时不用，留在这里是为了防止test冲突)
      * 
-     * @param userId      用户ID
+     * @param userId 用户ID
+     * 
      * @param userDetails 要更新的用户信息
+     * 
      * @return 更新后的用户信息
+     * 
      * @throws ResourceNotFoundException 当用户不存在时
-     * @throws BadRequestException       当新用户名已存在时
+     * 
+     * @throws BadRequestException 当新用户名已存在时
      */
     public User updateUser(Long userId, User userDetails) {
         User user = getUserById(userId);
 
-        // 更新基本信息
+        // 更新用户名
         if (userDetails.getUsername() != null && !userDetails.getUsername().equals(user.getUsername())) {
+            // 验证用户名长度
+            if (userDetails.getUsername().trim().length() < 3 || userDetails.getUsername().trim().length() > 20) {
+                throw new BadRequestException("用户名长度应在3-20个字符之间");
+            }
+            // 检查用户名是否已存在
             if (userRepository.existsByUsername(userDetails.getUsername())) {
                 throw new BadRequestException("用户名已存在");
             }
-            user.setUsername(userDetails.getUsername());
+            user.setUsername(userDetails.getUsername().trim());
         }
 
+        // 更新密码（保留原有逻辑，但建议分离到单独接口）
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
             user.setPassword(PasswordEncoder.encode(userDetails.getPassword()));
         }
 
-        if (userDetails.getPhone() != null) {
-            user.setPhone(userDetails.getPhone());
+        // 更新姓名
+        if (userDetails.getName() != null) {
+            if (userDetails.getName().trim().length() > 50) {
+                throw new BadRequestException("姓名长度不能超过50个字符");
+            }
+            user.setName(userDetails.getName().trim());
         }
+
+        // 更新手机号
+        if (userDetails.getPhone() != null) {
+            String phone = userDetails.getPhone().trim();
+            if (!phone.isEmpty()) {
+                // 验证手机号格式
+                if (!phone.matches("^1[3-9]\\d{9}$")) {
+                    throw new BadRequestException("手机号格式不正确");
+                }
+                // 检查手机号是否已被其他用户使用
+                Optional<User> existingUser = userRepository.findByPhone(phone);
+                if (existingUser.isPresent() && !existingUser.get().getUserId().equals(userId)) {
+                    throw new BadRequestException("该手机号已被其他用户使用");
+                }
+            }
+            user.setPhone(phone);
+        }
+
+        // 更新邮箱
+        if (userDetails.getEmail() != null) {
+            String email = userDetails.getEmail().trim();
+            if (!email.isEmpty()) {
+                // 验证邮箱格式
+                if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                    throw new BadRequestException("邮箱格式不正确");
+                }
+                // 检查邮箱是否已被其他用户使用
+                Optional<User> existingUser = userRepository.findByEmail(email);
+                if (existingUser.isPresent() && !existingUser.get().getUserId().equals(userId)) {
+                    throw new BadRequestException("该邮箱已被其他用户使用");
+                }
+            }
+            user.setEmail(email);
+        }
+
+        // 更新地址
+        if (userDetails.getAddress() != null) {
+            if (userDetails.getAddress().trim().length() > 200) {
+                throw new BadRequestException("地址长度不能超过200个字符");
+            }
+            user.setAddress(userDetails.getAddress().trim());
+        }
+
+        return userRepository.save(user);
+    }
+
+    /**
+     * 选择性更新用户信息（更安全的方式）
+     * 
+     * @param userId       用户ID
+     * @param updateFields 要更新的字段
+     * @return 更新后的用户信息
+     */
+    public User updateUserSelective(Long userId, Map<String, Object> updateFields) {
+        User user = getUserById(userId);
+
+        updateFields.forEach((key, value) -> {
+            switch (key) {
+                case "username":
+                    String username = (String) value;
+                    if (username.trim().length() < 3 || username.trim().length() > 20) {
+                        throw new BadRequestException("用户名长度应在3-20个字符之间");
+                    }
+                    if (userRepository.existsByUsername(username)) {
+                        throw new BadRequestException("用户名已存在");
+                    }
+                    user.setUsername(username);
+                    break;
+
+                case "name":
+                    String name = (String) value;
+                    if (name.trim().length() > 50) {
+                        throw new BadRequestException("姓名长度不能超过50个字符");
+                    }
+                    user.setName(name);
+                    break;
+
+                case "phone":
+                    String phone = (String) value;
+                    if (!phone.matches("^1[3-9]\\d{9}$")) {
+                        throw new BadRequestException("手机号格式不正确");
+                    }
+                    Optional<User> existingUserByPhone = userRepository.findByPhone(phone);
+                    if (existingUserByPhone.isPresent() && !existingUserByPhone.get().getUserId().equals(userId)) {
+                        throw new BadRequestException("该手机号已被其他用户使用");
+                    }
+                    user.setPhone(phone);
+                    break;
+
+                case "email":
+                    String email = (String) value;
+                    if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                        throw new BadRequestException("邮箱格式不正确");
+                    }
+                    Optional<User> existingUserByEmail = userRepository.findByEmail(email);
+                    if (existingUserByEmail.isPresent() && !existingUserByEmail.get().getUserId().equals(userId)) {
+                        throw new BadRequestException("该邮箱已被其他用户使用");
+                    }
+                    user.setEmail(email);
+                    break;
+
+                case "address":
+                    String address = (String) value;
+                    if (address.trim().length() > 200) {
+                        throw new BadRequestException("地址长度不能超过200个字符");
+                    }
+                    user.setAddress(address);
+                    break;
+            }
+        });
 
         return userRepository.save(user);
     }
