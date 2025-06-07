@@ -199,4 +199,45 @@
    - 维修人员更新维修进度
    - 记录维修项目和材料使用
    - 计算维修费用
-   - 完成维修记录 
+   - 完成维修记录
+
+## 4. 多工种维修人员自动分配系统
+
+### 4.1 工种需求(RequiredRepairmanType)相关
+- RequiredRepairmanType (工种需求)
+  - 主键: id (Long)
+  - 基本属性: required, assigned, type
+  - 关系:
+    - 多对一: 属于一个维修工单(MaintenanceItem)
+
+### 4.2 多工种分配关系
+- MaintenanceItem与Repairman
+  - 多对多关系通过item_repairman表实现
+  - 每个工单可以同时分配给多个不同工种的维修人员
+  - 维修人员可以接受或拒绝分配的工单
+  - 记录工单需要的各种工种及数量，以及已分配的数量
+
+### 4.3 数据库表扩展
+1. required_repairman_types
+   - id (PK)
+   - item_id (FK)
+   - type (ENUM)
+   - required (INT)
+   - assigned (INT)
+
+2. item_repairman (扩展字段)
+   - item_id (FK)
+   - repairman_id (FK)
+   - is_accepted (BOOLEAN) - 新增字段，表示维修人员是否接受工单
+
+### 4.4 业务关系说明
+1. 工单分配流程
+   - 系统根据工单需要的工种类型和数量自动分配合适的维修人员
+   - 分配优先级基于维修人员当前工作量，工作量较少的优先分配
+   - 维修人员可以接受或拒绝分配的工单
+   - 当维修人员拒绝工单时，系统自动寻找下一个合适的维修人员重新分配
+
+2. 工种类型管理
+   - 每个维修人员有一个特定工种类型(RepairmanType)
+   - 工单可以同时需要多种不同工种的维修人员
+   - 系统确保分配足够数量的每种类型维修人员 

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 
 @Service
 @Transactional
@@ -34,6 +35,10 @@ public class RepairmanService {
     private final RecordMaterialRepository recordMaterialRepository;
     @Autowired
     private final SalaryRepository salaryRepository;
+    @Autowired
+    private final RequiredRepairmanTypeRepository requiredTypeRepository;
+    @Autowired
+    private final CarRepository carRepository;
 
     // 初始化默认薪资标准
     @Transactional
@@ -324,22 +329,79 @@ public class RepairmanService {
     }
 
     // 拒绝维修工单
+    @Transactional
     public MaintenanceItem rejectMaintenanceItem(Long repairmanId, Long itemId, String reason) {
+        // 获取维修人员
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
 
+        // 获取工单
         MaintenanceItem item = maintenanceItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
 
-        // 验证工单状态，只有PENDING状态可以拒绝
-        if (item.getStatus() != MaintenanceStatus.PENDING) {
-            throw new BadRequestException("工单当前状态不允许拒绝");
+        // 从工单中移除此维修人员
+        Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
+        if (acceptance != null) {
+            acceptance.remove(repairman);
         }
 
-        item.setStatus(MaintenanceStatus.CANCELLED);
-        item.setResult(reason); // 存储拒绝原因
-        item.setUpdateTime(java.time.LocalDateTime.now());
-        return maintenanceItemRepository.save(item);
+        // 找出此维修人员的工种
+        RepairmanType type = repairman.getType();
+
+        // 更新对应工种的已分配数量
+        for (RequiredRepairmanType requirement : item.getRequiredTypes()) {
+            if (requirement.getType() == type) {
+                requirement.setAssigned(requirement.getAssigned() - 1);
+                requiredTypeRepository.save(requirement);
+                break;
+            }
+        }
+
+        // 保存工单状态
+        maintenanceItemRepository.save(item);
+
+        // 尝试分配新的维修人员
+        assignNextRepairman(item, type);
+
+        return item;
+    }
+
+    private void assignNextRepairman(MaintenanceItem item, RepairmanType type) {
+        // 找出该工种还需要分配的人数
+        int needed = 0;
+        for (RequiredRepairmanType req : item.getRequiredTypes()) {
+            if (req.getType() == type) {
+                needed = req.getRequired() - req.getAssigned();
+                break;
+            }
+        }
+
+        if (needed <= 0)
+            return;
+
+        // 查找工作量最少的维修人员
+        List<Repairman> availableRepairmen = repairmanRepository.findByTypeOrderByWorkloadAsc(type);
+
+        // 排除已经分配给这个工单的维修人员
+        List<Repairman> alreadyAssigned = new ArrayList<>(item.getRepairmenAcceptance().keySet());
+        availableRepairmen.removeAll(alreadyAssigned);
+
+        if (!availableRepairmen.isEmpty()) {
+            // 分配给工作量最少的维修人员
+            Repairman nextRepairman = availableRepairmen.get(0);
+            item.addRepairman(nextRepairman, false);
+
+            // 更新已分配数量
+            for (RequiredRepairmanType req : item.getRequiredTypes()) {
+                if (req.getType() == type) {
+                    req.setAssigned(req.getAssigned() + 1);
+                    requiredTypeRepository.save(req);
+                    break;
+                }
+            }
+
+            maintenanceItemRepository.save(item);
+        }
     }
 
     // 更新维修进度
@@ -547,5 +609,84 @@ public class RepairmanService {
             }
         }
         return savedRecord;
+    }
+
+    public MaintenanceItem submitRepairRequest(Long userId, Long carId, String name, String description,
+            Map<RepairmanType, Integer> requiredTypesMap) {
+        // 基本验证
+        if (carId == null) {
+            throw new BadRequestException("车辆ID不能为空");
+        }
+
+        MaintenanceItem maintenanceItem = new MaintenanceItem();
+        maintenanceItem.setName(name);
+        maintenanceItem.setDescription(description);
+        maintenanceItem.setCar(carRepository.findById(carId)
+                .orElseThrow(() -> new ResourceNotFoundException("Car", "id", carId)));
+        maintenanceItem.setStatus(MaintenanceStatus.PENDING);
+        maintenanceItem.setProgress(0);
+        maintenanceItem.setCreateTime(LocalDateTime.now());
+        maintenanceItem.setUpdateTime(LocalDateTime.now());
+        maintenanceItem.setCost(0.0);
+
+        // 保存维修工单，获取ID
+        MaintenanceItem savedItem = maintenanceItemRepository.save(maintenanceItem);
+
+        // 创建工种需求并保存
+        for (Map.Entry<RepairmanType, Integer> entry : requiredTypesMap.entrySet()) {
+            RequiredRepairmanType requiredType = new RequiredRepairmanType();
+            requiredType.setMaintenanceItem(savedItem);
+            requiredType.setType(entry.getKey());
+            requiredType.setRequired(entry.getValue());
+            requiredType.setAssigned(0);
+            requiredTypeRepository.save(requiredType);
+        }
+
+        // 自动分配维修人员
+        autoAssignRepairmen(savedItem);
+
+        return savedItem;
+    }
+
+    private void autoAssignRepairmen(MaintenanceItem item) {
+        // 先保存并刷新确保能获取到完整关联数据
+        MaintenanceItem savedItem = maintenanceItemRepository.saveAndFlush(item);
+
+        // 重新从数据库获取带有全部关联的工单
+        MaintenanceItem refreshedItem = maintenanceItemRepository.findById(savedItem.getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", savedItem.getItemId()));
+
+        // 从数据库加载这个工单的所有工种需求
+        List<RequiredRepairmanType> requirements = requiredTypeRepository
+                .findByMaintenanceItem_ItemId(refreshedItem.getItemId());
+
+        for (RequiredRepairmanType requirement : requirements) {
+            RepairmanType type = requirement.getType();
+            int needed = requirement.getRequired() - requirement.getAssigned();
+
+            if (needed <= 0)
+                continue;
+
+            // 查询该工种维修人员并按当前工作量排序
+            List<Repairman> availableRepairmen = repairmanRepository.findByTypeOrderByWorkloadAsc(type);
+
+            // 分配需要的数量
+            int assigned = 0;
+            for (Repairman repairman : availableRepairmen) {
+                if (assigned >= needed)
+                    break;
+
+                // 分配给此维修人员
+                refreshedItem.addRepairman(repairman, false); // 初始状态为未接受
+                assigned++;
+            }
+
+            // 更新已分配数量
+            requirement.setAssigned(requirement.getAssigned() + assigned);
+            requiredTypeRepository.save(requirement);
+        }
+
+        // 如果有变更，保存维修工单
+        maintenanceItemRepository.save(refreshedItem);
     }
 }

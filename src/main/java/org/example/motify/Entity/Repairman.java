@@ -9,52 +9,65 @@ import org.example.motify.Enum.RepairmanType;
 @Data
 @Entity
 @Table(name = "repairmen")
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({ "maintenanceItems", "salary" })
 public class Repairman {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long repairmanId;
 
     @Column(nullable = false, unique = true)
-    private String username;  // 用户名
+    private String username; // 用户名
 
     @Column(nullable = false)
-    private String password;  // 密码
+    private String password; // 密码
 
     @Column(nullable = true)
-    private String name;  // 姓名
+    private String name; // 姓名
 
     @Column
-    private String phone;  // 电话
+    private String phone; // 电话
 
     @Column
-    private String email;  // 邮箱
+    private String email; // 邮箱
 
     @Column(nullable = false)
-    private String gender;  // 性别
-    
+    private String gender; // 性别
+
     // 直接定义可设置的枚举类型字段
     @Enumerated(EnumType.STRING)
-    @Column(name = "type") 
-    private RepairmanType type;  // 工种类型，可写字段
+    @Column(name = "type")
+    private RepairmanType type; // 工种类型，可写字段
 
     // 通过type字段与Salary关联，只读方式
-    @ManyToOne(fetch = FetchType.EAGER)  // 改为EAGER加载
+    @ManyToOne(fetch = FetchType.EAGER) // 改为EAGER加载
     @JoinColumn(name = "type", referencedColumnName = "type", insertable = false, updatable = false)
     private Salary salary;
 
-    @ManyToMany(mappedBy = "repairmen", fetch = FetchType.EAGER)  // 改为EAGER加载
+    @ManyToMany
+    @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "repairman_id"), inverseJoinColumns = @JoinColumn(name = "item_id"))
     @JsonIgnore
-    private List<MaintenanceItem> maintenanceItems;  // 维修项目
+    private List<MaintenanceItem> maintenanceItems; // 维修项目
 
     // 获取时薪
     public Double getHourlyRate() {
         return salary != null ? salary.getHourlyRate().doubleValue() : 0.0;
     }
-    
+
     // 此方法仅用于API兼容性，实际不修改薪资
     // 薪资应通过修改type和对应的Salary记录来变更
     public void setHourlyRate(Float hourlyRate) {
         // 这个方法不应直接修改工资，因为工资由type关联的Salary决定
         // 为了兼容API，这里提供一个空实现
+    }
+
+    // 自定义toString方法避免循环引用
+    @Override
+    public String toString() {
+        return "Repairman{" +
+                "repairmanId=" + repairmanId +
+                ", username='" + username + '\'' +
+                ", name='" + name + '\'' +
+                ", type=" + type +
+                '}';
     }
 }

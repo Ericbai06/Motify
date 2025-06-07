@@ -231,3 +231,155 @@
    - 催单信息会覆盖之前的催单内容
    - 评分只能提交一次，不可修改
    - 每次操作都会更新`updateTime`字段
+
+# 多工种维修人员自动分配 API 文档
+
+## 概述
+多工种维修人员自动分配功能允许系统根据工单需要的工种类型和数量，自动分配合适的维修人员，主要包括：
+1. **多工种需求定义**：工单可同时需要多种不同工种的维修人员
+2. **自动分配算法**：基于工作量的维修人员自动分配
+3. **拒绝与重新分配**：维修人员可以拒绝工单，系统自动重新分配
+4. **工单状态管理**：跟踪维修人员接受状态
+
+## API 端点
+
+### 1. 创建需要多工种的维修工单
+
+**POST** `/api/repair/submit`
+
+#### 请求体
+```json
+{
+  "userId": 1,
+  "carId": 1,
+  "name": "多工种维修工单",
+  "description": "需要多个工种协作维修",
+  "requiredTypes": {
+    "MECHANIC": 2,
+    "PAINTER": 1,
+    "APPRENTICE": 1
+  }
+}
+```
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "itemId": 48,
+    "name": "多工种维修工单",
+    "description": "需要多个工种协作维修",
+    "status": "PENDING",
+    "progress": 0,
+    "createTime": "2025-06-06T16:41:01.248297",
+    "updateTime": "2025-06-06T16:41:01.248316",
+    "cost": 0.0,
+    "car": {
+      "carId": 1,
+      "brand": "丰田",
+      "model": "凯美瑞",
+      "licensePlate": "京A12345"
+    },
+    "repairmenAcceptance": {
+      "Repairman{repairmanId=1, username='repairman01', name='张师傅', type=MECHANIC}": false,
+      "Repairman{repairmanId=4, username='repairman04', name='赵师傅', type=PAINTER}": false,
+      "Repairman{repairmanId=5, username='repairman05', name='刘师傅', type=APPRENTICE}": false
+    },
+    "requiredTypes": [],
+    "repairmen": [
+      {"repairmanId": 1, "name": "张师傅", "type": "MECHANIC", "hourlyRate": 80.0},
+      {"repairmanId": 4, "name": "赵师傅", "type": "PAINTER", "hourlyRate": 100.0},
+      {"repairmanId": 5, "name": "刘师傅", "type": "APPRENTICE", "hourlyRate": 35.0}
+    ]
+  }
+}
+```
+
+#### 业务规则
+- 工单会自动分配给合适工种类型的维修人员
+- 分配遵循基于工作量的优先级规则，当前工作量低的维修人员优先被分配
+- 系统确保为每种工种分配足够数量的维修人员
+- 工单创建时维修人员接受状态为false，表示待确认
+
+---
+
+### 2. 维修人员拒绝工单
+
+**PUT** `/api/repairman/{repairmanId}/reject/{itemId}`
+
+#### 请求参数
+- `repairmanId` (路径参数): 维修人员ID
+- `itemId` (路径参数): 工单ID
+
+#### 请求体
+```json
+{
+  "reason": "太忙了"
+}
+```
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "itemId": 48,
+    "name": "多工种维修工单",
+    "description": "需要多个工种协作维修",
+    "status": "PENDING",
+    "requiredTypes": [
+      {"id": 31, "type": "APPRENTICE", "required": 1, "assigned": 1},
+      {"id": 32, "type": "MECHANIC", "required": 2, "assigned": 1},
+      {"id": 33, "type": "PAINTER", "required": 1, "assigned": 1}
+    ],
+    "repairmen": [
+      {"repairmanId": 2, "name": "李师傅", "type": "MECHANIC", "hourlyRate": 80.0},
+      {"repairmanId": 4, "name": "赵师傅", "type": "PAINTER", "hourlyRate": 100.0},
+      {"repairmanId": 5, "name": "刘师傅", "type": "APPRENTICE", "hourlyRate": 35.0}
+    ]
+  }
+}
+```
+
+#### 业务规则
+- 维修人员可以拒绝分配的工单，并提供拒绝原因
+- 当维修人员拒绝工单后，系统会自动找到下一个合适的维修人员进行分配
+- 如果无法找到合适的替代维修人员，工单的required工种数量将大于assigned数量
+- 系统会根据工种类型进行匹配，确保新分配的维修人员工种类型符合需求
+
+---
+
+## 使用流程示例
+
+### 场景：创建多工种协作工单并处理拒绝
+
+1. 管理员或用户创建需要多工种协作的维修工单
+   ```
+   POST /api/repair/submit
+   {
+     "userId": 1,
+     "carId": 1,
+     "name": "车辆综合大修",
+     "description": "需要机械师修理发动机，喷漆工重新喷漆，学徒协助",
+     "requiredTypes": {
+       "MECHANIC": 2,
+       "PAINTER": 1,
+       "APPRENTICE": 1
+     }
+   }
+   ```
+
+2. 系统自动分配合适的维修人员，返回工单详情
+
+3. 某维修人员拒绝工单
+   ```
+   PUT /api/repairman/1/reject/48
+   {
+     "reason": "太忙了"
+   }
+   ```
+
+4. 系统自动找到下一个合适的维修人员进行重新分配，返回更新后的工单信息

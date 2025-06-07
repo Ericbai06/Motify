@@ -231,6 +231,54 @@
 
 ---
 
+## 15. 自动分配多工种维修工单
+
+**POST** `/api/repair/submit`
+
+```json
+{
+  "userId": 1,
+  "carId": 1,
+  "name": "多工种维修工单",
+  "description": "需要多个工种协作维修",
+  "requiredTypes": {
+    "MECHANIC": 2,
+    "PAINTER": 1,
+    "APPRENTICE": 1
+  }
+}
+```
+
+- <b>说明：</b> 创建需要多个工种协作的维修工单，系统自动分配合适的维修人员。
+- <b>参数：</b>
+  - userId：用户ID（必填）
+  - carId：车辆ID（必填）
+  - name：工单名称（必填）
+  - description：工单描述（必填）
+  - requiredTypes：需要的工种及数量（必填，格式为工种类型:数量）
+- <b>返回：</b> 新创建的工单对象，包含已分配的维修人员信息
+
+---
+
+## 16. 拒绝工单并自动重新分配
+
+**PUT** `/api/repairman/{repairmanId}/reject/{itemId}`
+
+```json
+{
+  "reason": "当前工作量过大，无法承接"
+}
+```
+
+- <b>说明：</b> 维修人员拒绝分配的工单，系统会自动找到下一个合适的维修人员进行分配。
+- <b>参数：</b>
+  - repairmanId：维修人员ID（路径参数）
+  - itemId：工单ID（路径参数）
+  - reason：拒绝原因（选填）
+- <b>返回：</b> 更新后的工单对象，包含新分配的维修人员信息
+
+---
+
 # 完整业务流程测试设计
 
 ## 1. 维修人员端典型业务流
@@ -326,3 +374,17 @@
 > - 可根据实际数据调整ID和参数
 
 ---
+
+# 多工种自动分配业务流程测试
+
+## 1. 多工种维修工单流程
+
+1. **创建多工种维修工单**
+   - POST `/api/repair/submit`
+   - body: `{ "userId": 1, "carId": 1, "name": "多工种维修工单", "description": "需要多个工种协作维修", "requiredTypes": { "MECHANIC": 2, "PAINTER": 1, "APPRENTICE": 1 } }`
+   - 预期：返回 200，包含自动分配的多个不同工种维修人员
+
+2. **维修人员拒绝工单**
+   - PUT `/api/repairman/1/reject/5`
+   - body: `{ "reason": "当前工作量过大，无法承接" }`
+   - 预期：返回 200，包含更新后的工单信息，原维修人员被移除，系统自动分配新维修人员

@@ -1,6 +1,7 @@
 package org.example.motify.Controller;
 
 import org.example.motify.Entity.*;
+import org.example.motify.Enum.RepairmanType;
 import org.example.motify.Service.RepairmanService;
 import org.example.motify.Exception.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -190,12 +191,4 @@ public class RepairmanController {
         return ExceptionLogger.createSuccessResponse(record);
     }
 
-    // 示例：获取工单材料及用量
-    // @GetMapping("/maintenance-items/{itemId}/materials")
-    // public Map<Material, Integer> getMaterialsWithAmount(@PathVariable Long
-    // itemId) {
-    // MaintenanceItem item =
-    // maintenanceItemRepository.findById(itemId).orElseThrow(...);
-    // return item.getMaterials();
-    // }
 }

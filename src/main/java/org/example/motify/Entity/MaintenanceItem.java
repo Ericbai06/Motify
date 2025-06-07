@@ -6,6 +6,9 @@ import java.util.List;
 import org.example.motify.Enum.MaintenanceStatus;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @Data
 @Entity
@@ -58,15 +61,124 @@ public class MaintenanceItem {
     @Column(nullable = false)
     private Double cost; // 维修总成本
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "car_id", nullable = false)
     private Car car;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id", foreignKey = @ForeignKey(name = "fk_item_repairman", foreignKeyDefinition = "FOREIGN KEY (item_id) REFERENCES maintenance_items(item_id) ON DELETE CASCADE")), inverseJoinColumns = @JoinColumn(name = "repairman_id"))
-    private List<Repairman> repairmen;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "item_repairman", joinColumns = @JoinColumn(name = "item_id"))
+    @MapKeyJoinColumn(name = "repairman_id")
+    @Column(name = "is_accepted")
+    private Map<Repairman, Boolean> repairmenAcceptance;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<MaintenanceRecord> maintenanceRecords;
+
+    @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @com.fasterxml.jackson.annotation.JsonManagedReference
+    private List<RequiredRepairmanType> requiredTypes = new ArrayList<>();
+
+    /**
+     * 获取所有分配到该工单的维修人员列表
+     * 
+     * @return 维修人员列表
+     */
+    public List<Repairman> getRepairmen() {
+        if (repairmenAcceptance == null) {
+            return List.of();
+        }
+        return new ArrayList<>(repairmenAcceptance.keySet());
+    }
+
+    /**
+     * 获取已接受工单的维修人员列表
+     * 
+     * @return 已接受的维修人员列表
+     */
+    public List<Repairman> getAcceptedRepairmen() {
+        if (repairmenAcceptance == null) {
+            return List.of();
+        }
+        return repairmenAcceptance.entrySet().stream()
+                .filter(Map.Entry::getValue) // 筛选已接受的维修人员
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取未接受工单的维修人员列表
+     * 
+     * @return 未接受的维修人员列表
+     */
+    public List<Repairman> getPendingRepairmen() {
+        if (repairmenAcceptance == null) {
+            return List.of();
+        }
+        return repairmenAcceptance.entrySet().stream()
+                .filter(entry -> !entry.getValue()) // 筛选未接受的维修人员
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 检查特定维修人员是否已接受工单
+     * 
+     * @param repairman 维修人员
+     * @return 是否接受
+     */
+    public boolean isAcceptedBy(Repairman repairman) {
+        if (repairmenAcceptance == null) {
+            return false;
+        }
+        Boolean accepted = repairmenAcceptance.get(repairman);
+        return accepted != null && accepted;
+    }
+
+    /**
+     * 设置维修人员并初始化接受状态
+     * 
+     * @param repairmen 维修人员列表
+     */
+    public void setRepairmen(List<Repairman> repairmen) {
+        if (repairmen == null) {
+            this.repairmenAcceptance = null;
+            return;
+        }
+
+        if (this.repairmenAcceptance == null) {
+            this.repairmenAcceptance = new java.util.HashMap<>();
+        } else {
+            this.repairmenAcceptance.clear();
+        }
+
+        // 将每个维修人员添加到Map中，默认接受状态为false
+        for (Repairman repairman : repairmen) {
+            this.repairmenAcceptance.put(repairman, false);
+        }
+    }
+
+    /**
+     * 添加维修人员并设置接受状态
+     * 
+     * @param repairman 维修人员
+     * @param accepted  是否接受
+     */
+    public void addRepairman(Repairman repairman, boolean accepted) {
+        if (this.repairmenAcceptance == null) {
+            this.repairmenAcceptance = new java.util.HashMap<>();
+        }
+        this.repairmenAcceptance.put(repairman, accepted);
+    }
+
+    public List<RequiredRepairmanType> getRequiredTypes() {
+        if (requiredTypes == null) {
+            requiredTypes = new ArrayList<>();
+        }
+        return requiredTypes;
+    }
+
+    public void setRequiredTypes(List<RequiredRepairmanType> requiredTypes) {
+        this.requiredTypes = requiredTypes;
+    }
 }

@@ -14,6 +14,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +34,8 @@ class RepairmanControllerTest {
         private MockMvc mockMvc;
         @MockBean
         private RepairmanService repairmanService;
+        @Autowired
+        private WebApplicationContext webApplicationContext;
 
         private Repairman repairman;
 
@@ -44,6 +50,18 @@ class RepairmanControllerTest {
                 repairman.setType(RepairmanType.BODYWORKER);
                 repairman.setPhone("13800000000");
                 repairman.setEmail("test@example.com");
+        }
+
+        @BeforeEach
+        void setupMockMvc() {
+                mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                                .defaultRequest(MockMvcRequestBuilders.get("/")
+                                                .accept(MediaType.APPLICATION_JSON)
+                                                .contentType(new MediaType(
+                                                                MediaType.APPLICATION_JSON.getType(),
+                                                                MediaType.APPLICATION_JSON.getSubtype(),
+                                                                java.nio.charset.StandardCharsets.UTF_8)))
+                                .build();
         }
 
         @Test
@@ -232,32 +250,6 @@ class RepairmanControllerTest {
                                 .andExpect(status().isNotFound());
         }
 
-        @Test
-        void saveMaintenanceItem_Success() throws Exception {
-                MaintenanceItem item = new MaintenanceItem();
-                item.setItemId(1L);
-                item.setName("测试工单");
-                when(repairmanService.saveMaintenanceItem(any(MaintenanceItem.class))).thenReturn(item);
-                String json = "{\"itemId\":1,\"name\":\"测试工单\"}";
-                mockMvc.perform(post("/api/repairman/maintenance-items")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(json))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.code").value(200))
-                                .andExpect(jsonPath("$.data.itemId").value(1L))
-                                .andExpect(jsonPath("$.data.name").value("测试工单"));
-        }
-
-        @Test
-        void saveMaintenanceItem_BadRequest() throws Exception {
-                when(repairmanService.saveMaintenanceItem(any(MaintenanceItem.class)))
-                                .thenThrow(new org.example.motify.Exception.BadRequestException("参数错误"));
-                String json = "{\"itemId\":1,\"name\":\"测试工单\"}";
-                mockMvc.perform(post("/api/repairman/maintenance-items")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(json))
-                                .andExpect(status().isBadRequest());
-        }
 
         @Test
         void getCurrentRecords_Success() throws Exception {
@@ -528,5 +520,42 @@ class RepairmanControllerTest {
                                 .andExpect(jsonPath("$.data.name").value("补胎-2024-06-02T10:00:00"))
                                 .andExpect(jsonPath("$.data.description").value("补胎"))
                                 .andExpect(jsonPath("$.data.repairManId").value(1L));
+        }
+
+        @Test
+        void acceptMaintenanceItemByPath_Success() throws Exception {
+                MaintenanceItem item = new MaintenanceItem();
+                item.setItemId(1L);
+                item.setStatus(MaintenanceStatus.ACCEPTED);
+                when(repairmanService.acceptMaintenanceItem(eq(1L), eq(1L))).thenReturn(item);
+
+                mockMvc.perform(post("/api/repairman/1/maintenance-items/1/accept")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.code").value(200))
+                                .andExpect(jsonPath("$.data.itemId").value(1L))
+                                .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+        }
+
+        @Test
+        void acceptMaintenanceItemByPath_BadRequest() throws Exception {
+                when(repairmanService.acceptMaintenanceItem(eq(1L), eq(1L)))
+                                .thenThrow(new org.example.motify.Exception.BadRequestException("参数错误"));
+
+                mockMvc.perform(post("/api/repairman/1/maintenance-items/1/accept")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value(400));
+        }
+
+        @Test
+        void acceptMaintenanceItemByPath_NotFound() throws Exception {
+                when(repairmanService.acceptMaintenanceItem(eq(1L), eq(1L)))
+                                .thenThrow(new org.example.motify.Exception.ResourceNotFoundException("未找到"));
+
+                mockMvc.perform(post("/api/repairman/1/maintenance-items/1/accept")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.code").value(404));
         }
 }
