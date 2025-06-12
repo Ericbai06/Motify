@@ -3,6 +3,7 @@ package org.example.motify.Controller;
 import org.example.motify.Entity.*;
 import org.example.motify.Enum.RepairmanType;
 import org.example.motify.Service.RepairmanService;
+import org.example.motify.Service.BatchRepairService;
 import org.example.motify.Exception.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/repair")
@@ -18,9 +20,11 @@ public class RepairController {
     @Autowired
     private RepairmanService repairmanService;
 
+    @Autowired
+    private BatchRepairService batchRepairService;
+
     /**
      * 提交维修工单并根据工种需求自动分配维修人员
-     * 
      * <b>请求示例：</b>
      * 
      * <pre>
@@ -59,5 +63,11 @@ public class RepairController {
                 userId, carId, name, description, requiredTypes);
 
         return ExceptionLogger.createSuccessResponse(item);
+    }
+
+    @PostMapping("/batch-submit")
+    public ResponseEntity<?> batchSubmitRepairRequests(@RequestBody List<Map<String, Object>> requests) {
+        List<MaintenanceItem> items = batchRepairService.batchSubmitRepairRequests(requests);
+        return ExceptionLogger.createSuccessResponse(items);
     }
 }

@@ -383,3 +383,342 @@
    ```
 
 4. 系统自动找到下一个合适的维修人员进行重新分配，返回更新后的工单信息
+
+# 工资结算系统 API 文档
+
+## 概述
+工资结算系统为维修人员提供工资计算、查询和统计功能，主要包括：
+1. **工时结算**：系统根据维修记录自动计算维修人员工时和收入
+2. **月度自动结算**：每月自动汇总并生成工资记录
+3. **历史数据查询**：提供多维度的工资历史查询
+4. **统计分析**：提供年度工资、趋势分析等统计功能
+
+## API 端点
+
+### 1. 管理员接口：获取指定月份的工资记录
+
+**GET** `/api/wages/{year}/{month}`
+
+#### 请求参数
+- `year` (路径参数): 年份
+- `month` (路径参数): 月份(1-12)
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "repairmanId": 1,
+      "repairmanName": "张师傅",
+      "repairmanType": "MECHANIC",
+      "year": 2023,
+      "month": 6,
+      "totalWorkHours": 160.5,
+      "totalIncome": 12840.0,
+      "hourlyRate": 80.0,
+      "settlementDate": "2023-07-01T00:01:00"
+    },
+    {
+      "id": 2,
+      "repairmanId": 2,
+      "repairmanName": "李师傅",
+      "repairmanType": "PAINTER",
+      "year": 2023,
+      "month": 6,
+      "totalWorkHours": 145.0,
+      "totalIncome": 14500.0,
+      "hourlyRate": 100.0,
+      "settlementDate": "2023-07-01T00:01:00"
+    }
+  ]
+}
+```
+
+### 2. 管理员接口：获取指定维修人员的工资记录
+
+**GET** `/api/wages/repairman/{repairmanId}`
+
+#### 请求参数
+- `repairmanId` (路径参数): 维修人员ID
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "repairmanId": 1,
+      "repairmanName": "张师傅",
+      "repairmanType": "MECHANIC",
+      "year": 2023,
+      "month": 6,
+      "totalWorkHours": 160.5,
+      "totalIncome": 12840.0,
+      "hourlyRate": 80.0,
+      "settlementDate": "2023-07-01T00:01:00"
+    },
+    {
+      "id": 3,
+      "repairmanId": 1,
+      "repairmanName": "张师傅",
+      "repairmanType": "MECHANIC",
+      "year": 2023,
+      "month": 5,
+      "totalWorkHours": 168.0,
+      "totalIncome": 13440.0,
+      "hourlyRate": 80.0,
+      "settlementDate": "2023-06-01T00:01:00"
+    }
+  ]
+}
+```
+
+### 3. 管理员接口：手动触发月度工资结算
+
+**POST** `/api/wages/calculate`
+
+#### 请求体
+```json
+{
+  "year": 2023,
+  "month": 6
+}
+```
+注：年份和月份参数可选，默认为上个月
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "message": "2023年6月的工资已计算完成"
+  }
+}
+```
+
+#### 业务规则
+- 系统会基于指定月份的维修记录计算每个维修人员的工时和收入
+- 如果指定月份的工资记录已存在，系统会先删除再重新计算
+- 只有对有工作记录的维修人员才会生成工资记录
+
+### 4. 维修人员接口：获取个人工资历史
+
+**GET** `/api/wages/my/history`
+
+#### 请求参数
+- 无（基于当前登录用户）
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "repairmanId": 1,
+      "repairmanName": "张师傅",
+      "repairmanType": "MECHANIC",
+      "year": 2023,
+      "month": 6,
+      "totalWorkHours": 160.5,
+      "totalIncome": 12840.0,
+      "hourlyRate": 80.0,
+      "settlementDate": "2023-07-01T00:01:00"
+    },
+    {
+      "id": 3,
+      "repairmanId": 1,
+      "repairmanName": "张师傅",
+      "repairmanType": "MECHANIC",
+      "year": 2023,
+      "month": 5,
+      "totalWorkHours": 168.0,
+      "totalIncome": 13440.0,
+      "hourlyRate": 80.0,
+      "settlementDate": "2023-06-01T00:01:00"
+    }
+  ]
+}
+```
+
+### 5. 维修人员接口：获取指定月份工资详情
+
+**GET** `/api/wages/my/{year}/{month}`
+
+#### 请求参数
+- `year` (路径参数): 年份
+- `month` (路径参数): 月份(1-12)
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": 1,
+    "repairmanId": 1,
+    "repairmanName": "张师傅",
+    "repairmanType": "MECHANIC",
+    "year": 2023,
+    "month": 6,
+    "totalWorkHours": 160.5,
+    "totalIncome": 12840.0,
+    "hourlyRate": 80.0,
+    "settlementDate": "2023-07-01T00:01:00"
+  }
+}
+```
+
+#### 无记录响应示例
+```json
+{
+  "code": 200,
+  "message": "2023年7月没有工资记录",
+  "data": {}
+}
+```
+
+### 6. 维修人员接口：获取年度工资统计
+
+**GET** `/api/wages/my/yearly-stats`
+
+#### 请求参数
+- `year` (查询参数，可选): 年份，默认为当前年份
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "year": 2023,
+    "totalIncome": 75420.0,
+    "totalWorkHours": 942.75,
+    "averageMonthlyIncome": 12570.0,
+    "averageHourlyRate": 80.0,
+    "highestMonth": 5,
+    "highestMonthIncome": 13440.0,
+    "workingMonths": 6,
+    "monthlyDetails": [
+      {
+        "id": 3,
+        "repairmanId": 1,
+        "repairmanName": "张师傅",
+        "repairmanType": "MECHANIC",
+        "year": 2023,
+        "month": 1,
+        "totalWorkHours": 152.25,
+        "totalIncome": 12180.0,
+        "hourlyRate": 80.0,
+        "settlementDate": "2023-02-01T00:01:00"
+      },
+      // ... 其他月份数据
+    ]
+  }
+}
+```
+
+#### 无记录响应示例
+```json
+{
+  "code": 200,
+  "message": "2024年没有工资记录",
+  "data": {}
+}
+```
+
+### 7. 维修人员接口：获取工资统计摘要
+
+**GET** `/api/wages/my/summary`
+
+#### 请求参数
+- 无（基于当前登录用户）
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "totalIncome": 128640.0,
+    "totalWorkHours": 1608.0,
+    "totalMonths": 12,
+    "averageMonthlyIncome": 10720.0,
+    "recent3MonthsIncome": 38760.0,
+    "highestMonth": "2023年5月",
+    "highestMonthIncome": 13440.0,
+    "lowestMonth": "2023年2月",
+    "lowestMonthIncome": 9600.0,
+    "yearlyTrend": {
+      "2022": 53040.0,
+      "2023": 75600.0
+    }
+  }
+}
+```
+
+#### 无记录响应示例
+```json
+{
+  "code": 200,
+  "message": "没有工资记录",
+  "data": {}
+}
+```
+
+## 自动结算机制
+
+### 月度自动结算
+系统会在每月1日自动结算上个月的工资记录。该过程由定时任务自动执行，不需要手动干预。
+
+### 历史数据初始化
+系统在启动时会自动检查并结算历史维修记录的工资数据，确保数据完整性。
+
+## 数据库字段说明
+
+### Wage 表字段
+- `id` (BIGINT): 主键ID
+- `repairman_id` (BIGINT): 维修人员ID，外键关联repairmen表
+- `year` (INT): 年份
+- `month` (INT): 月份
+- `total_work_hours` (DOUBLE): 总工作时长（小时）
+- `total_income` (DOUBLE): 总收入
+- `settlement_date` (DATETIME): 结算日期
+- `repairman_name` (VARCHAR): 维修人员姓名（冗余存储）
+- `repairman_type` (VARCHAR): 维修人员类型（冗余存储）
+- `hourly_rate` (DOUBLE): 小时工资率（冗余存储）
+
+## 使用流程示例
+
+### 场景1：管理员查看并重新计算工资
+1. 查看特定月份的工资记录：`GET /api/wages/2023/6`
+2. 发现数据不准确，重新计算：`POST /api/wages/calculate` (body: `{"year": 2023, "month": 6}`)
+3. 再次查看更新后的工资记录：`GET /api/wages/2023/6`
+
+### 场景2：维修人员查看个人工资数据
+1. 查看工资总体情况：`GET /api/wages/my/summary`
+2. 查看年度详细数据：`GET /api/wages/my/yearly-stats?year=2023`
+3. 查看特定月份详情：`GET /api/wages/my/2023/6`
+
+## 注意事项
+
+1. **权限控制**：
+   - 管理员可以查看所有维修人员的工资
+   - 维修人员只能查看自己的工资信息
+   - 需要正确的认证和授权才能访问API
+
+2. **数据计算规则**：
+   - 工作时长基于维修记录中的工时（分钟）转换为小时
+   - 收入 = 工作时长 × 小时工资率
+   - 统计数据自动计算，无需手动干预
+
+3. **数据完整性**：
+   - 系统启动时自动检查并补充缺失的历史工资记录
+   - 每月自动结算确保数据及时更新
