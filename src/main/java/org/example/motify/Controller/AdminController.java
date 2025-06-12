@@ -1,6 +1,12 @@
 package org.example.motify.Controller;
 
 import org.example.motify.Entity.Admin;
+import org.example.motify.Entity.User;
+import org.example.motify.Entity.Repairman;
+import org.example.motify.Entity.Car;
+import org.example.motify.Entity.MaintenanceItem;
+import org.example.motify.Entity.MaintenanceRecord;
+import org.example.motify.Entity.Wage;
 import org.example.motify.Service.AdminService;
 import org.example.motify.Exception.AuthenticationException;
 import org.example.motify.Exception.BadRequestException;
@@ -11,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -114,6 +121,136 @@ public class AdminController {
             return ResponseEntity.internalServerError().body(Map.of(
                 "success", false,
                 "message", "获取信息失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取所有用户信息
+     */
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            List<User> users = adminService.getAllUsers();
+            // 清除密码信息，保护隐私
+            users.forEach(user -> user.setPassword(null));
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取用户列表成功",
+                "data", users,
+                "count", users.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取用户列表失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取所有维修人员信息
+     */
+    @GetMapping("/repairmen")
+    public ResponseEntity<?> getAllRepairmen() {
+        try {
+            List<Repairman> repairmen = adminService.getAllRepairmen();
+            // 清除密码信息，保护隐私
+            repairmen.forEach(repairman -> repairman.setPassword(null));
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取维修人员列表成功",
+                "data", repairmen,
+                "count", repairmen.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取维修人员列表失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取所有车辆信息
+     */
+    @GetMapping("/cars")
+    public ResponseEntity<?> getAllCars() {
+        try {
+            List<Car> cars = adminService.getAllCars();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取车辆列表成功",
+                "data", cars,
+                "count", cars.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取车辆列表失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取所有维修工单信息
+     */
+    @GetMapping("/maintenance-items")
+    public ResponseEntity<?> getAllMaintenanceItems() {
+        try {
+            List<MaintenanceItem> maintenanceItems = adminService.getAllMaintenanceItems();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取维修工单列表成功",
+                "data", maintenanceItems,
+                "count", maintenanceItems.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取维修工单列表失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取所有历史维修记录
+     */
+    @GetMapping("/maintenance-records")
+    public ResponseEntity<?> getAllMaintenanceRecords() {
+        try {
+            List<MaintenanceRecord> maintenanceRecords = adminService.getAllMaintenanceRecords();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取历史维修记录列表成功",
+                "data", maintenanceRecords,
+                "count", maintenanceRecords.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取历史维修记录列表失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取所有工时费发放记录
+     */
+    @GetMapping("/wages")
+    public ResponseEntity<?> getAllWages() {
+        try {
+            List<Wage> wages = adminService.getAllWages();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取工时费发放记录列表成功",
+                "data", wages,
+                "count", wages.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取工时费发放记录列表失败：" + e.getMessage()
             ));
         }
     }

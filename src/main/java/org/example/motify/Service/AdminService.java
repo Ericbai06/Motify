@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 @Service
 @Transactional
@@ -21,6 +22,24 @@ import java.util.Optional;
 public class AdminService {
     @Autowired
     private final AdminRepository adminRepository;
+    
+    @Autowired
+    private final UserRepository userRepository;
+    
+    @Autowired
+    private final RepairmanRepository repairmanRepository;
+    
+    @Autowired
+    private final CarRepository carRepository;
+    
+    @Autowired
+    private final MaintenanceItemRepository maintenanceItemRepository;
+    
+    @Autowired
+    private final MaintenanceRecordRepository maintenanceRecordRepository;
+    
+    @Autowired
+    private final WageRepository wageRepository;
 
     public Admin registerAdmin(Admin admin) {
         log.info("Starting admin registration, username: {}", admin.getUsername());
@@ -125,5 +144,71 @@ public class AdminService {
             throw new BadRequestException("管理员ID不能为空");
         }
         return adminRepository.findById(adminId);
+    }
+
+    /**
+     * 获取所有用户信息
+     * 
+     * @return 所有用户列表
+     */
+    @Transactional(readOnly = true)
+    public List<User> getAllUsers() {
+        log.info("Admin querying all users");
+        return userRepository.findAll();
+    }
+
+    /**
+     * 获取所有维修人员信息
+     * 
+     * @return 所有维修人员列表
+     */
+    @Transactional(readOnly = true)
+    public List<Repairman> getAllRepairmen() {
+        log.info("Admin querying all repairmen");
+        return repairmanRepository.findAll();
+    }
+
+    /**
+     * 获取所有车辆信息
+     * 
+     * @return 所有车辆列表
+     */
+    @Transactional(readOnly = true)
+    public List<Car> getAllCars() {
+        log.info("Admin querying all cars");
+        return carRepository.findAll();
+    }
+
+    /**
+     * 获取所有维修工单信息
+     * 
+     * @return 所有维修工单列表
+     */
+    @Transactional(readOnly = true)
+    public List<MaintenanceItem> getAllMaintenanceItems() {
+        log.info("Admin querying all maintenance items");
+        return maintenanceItemRepository.findAll();
+    }
+
+    /**
+     * 获取所有历史维修记录
+     * 
+     * @return 所有历史维修记录列表
+     */
+    @Transactional(readOnly = true)
+    public List<MaintenanceRecord> getAllMaintenanceRecords() {
+        log.info("Admin querying all maintenance records");
+        return maintenanceRecordRepository.findAll();
+    }
+
+    /**
+     * 获取所有工时费发放记录
+     * 
+     * @return 所有工时费发放记录列表
+     */
+    @Transactional(readOnly = true)
+    public List<Wage> getAllWages() {
+        log.info("Admin querying all wage records");
+        return wageRepository.findAll();
     }
 }
