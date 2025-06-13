@@ -2,6 +2,7 @@ package org.example.motify.Controller;
 
 import org.example.motify.Entity.*;
 import org.example.motify.Service.AdminService;
+import org.example.motify.Enum.MaterialType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,7 @@ class AdminControllerTest {
     private MaintenanceItem testMaintenanceItem;
     private MaintenanceRecord testMaintenanceRecord;
     private Wage testWage;
+    private Material testMaterial;
 
     @BeforeEach
     void setUp() {
@@ -92,6 +94,15 @@ class AdminControllerTest {
         testWage.setRepairmanName("测试维修工");
         testWage.setRepairmanType("MECHANIC");
         testWage.setHourlyRate(80.0);
+
+        // 设置测试材料
+        testMaterial = new Material();
+        testMaterial.setMaterialId(1L);
+        testMaterial.setName("5W-30全合成机油");
+        testMaterial.setDescription("高品质全合成机油");
+        testMaterial.setType(MaterialType.OIL);
+        testMaterial.setStock(50);
+        testMaterial.setPrice(89.0);
     }
 
     @Test
@@ -202,5 +213,91 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.data[0].repairmanName").value("测试维修工"))
                 .andExpect(jsonPath("$.data[0].repairmanType").value("MECHANIC"))
                 .andExpect(jsonPath("$.data[0].hourlyRate").value(80.0));
+    }
+
+    @Test
+    void getAllMaterials_Success() throws Exception {
+        List<Material> materials = Arrays.asList(testMaterial);
+        when(adminService.getAllMaterials()).thenReturn(materials);
+
+        mockMvc.perform(get("/api/admin/materials"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("获取材料库存列表成功"))
+                .andExpect(jsonPath("$.count").value(1))
+                .andExpect(jsonPath("$.data[0].materialId").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("5W-30全合成机油"))
+                .andExpect(jsonPath("$.data[0].description").value("高品质全合成机油"))
+                .andExpect(jsonPath("$.data[0].type").value("OIL"))
+                .andExpect(jsonPath("$.data[0].stock").value(50))
+                .andExpect(jsonPath("$.data[0].price").value(89.0));
+    }
+
+    @Test
+    void getMaterialsByType_Success() throws Exception {
+        List<Material> materials = Arrays.asList(testMaterial);
+        when(adminService.getMaterialsByType(MaterialType.OIL)).thenReturn(materials);
+
+        mockMvc.perform(get("/api/admin/materials/by-type").param("type", "OIL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("获取指定类型材料库存成功"))
+                .andExpect(jsonPath("$.count").value(1))
+                .andExpect(jsonPath("$.data[0].type").value("OIL"));
+    }
+
+    @Test
+    void getMaterialsByType_InvalidType() throws Exception {
+        mockMvc.perform(get("/api/admin/materials/by-type").param("type", "INVALID"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("无效的材料类型：INVALID"));
+    }
+
+    @Test
+    void getMaterialsByStockRange_Success() throws Exception {
+        List<Material> materials = Arrays.asList(testMaterial);
+        when(adminService.getMaterialsByStockRange(40, 60)).thenReturn(materials);
+
+        mockMvc.perform(get("/api/admin/materials/by-stock-range")
+                .param("minStock", "40")
+                .param("maxStock", "60"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("获取指定库存范围材料成功"))
+                .andExpect(jsonPath("$.count").value(1))
+                .andExpect(jsonPath("$.data[0].stock").value(50));
+    }
+
+    @Test
+    void getMaterialsByStockRange_InvalidRange() throws Exception {
+        mockMvc.perform(get("/api/admin/materials/by-stock-range")
+                .param("minStock", "-1")
+                .param("maxStock", "10"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("库存范围参数无效"));
+    }
+
+    @Test
+    void getLowStockMaterials_Success() throws Exception {
+        // 创建低库存材料
+        Material lowStockMaterial = new Material();
+        lowStockMaterial.setMaterialId(2L);
+        lowStockMaterial.setName("空气滤芯");
+        lowStockMaterial.setDescription("高效空气过滤器");
+        lowStockMaterial.setType(MaterialType.FILTER);
+        lowStockMaterial.setStock(8);
+        lowStockMaterial.setPrice(45.0);
+
+        List<Material> lowStockMaterials = Arrays.asList(lowStockMaterial);
+        when(adminService.getMaterialsByStockRange(0, 10)).thenReturn(lowStockMaterials);
+
+        mockMvc.perform(get("/api/admin/materials/low-stock"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("获取低库存材料成功"))
+                .andExpect(jsonPath("$.count").value(1))
+                .andExpect(jsonPath("$.data[0].stock").value(8));
     }
 }

@@ -7,9 +7,11 @@ import org.example.motify.Entity.Car;
 import org.example.motify.Entity.MaintenanceItem;
 import org.example.motify.Entity.MaintenanceRecord;
 import org.example.motify.Entity.Wage;
+import org.example.motify.Entity.Material;
 import org.example.motify.Service.AdminService;
 import org.example.motify.Exception.AuthenticationException;
 import org.example.motify.Exception.BadRequestException;
+import org.example.motify.Enum.MaterialType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -267,6 +269,105 @@ public class AdminController {
             return ResponseEntity.internalServerError().body(Map.of(
                 "success", false,
                 "message", "获取工时费发放记录列表失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取所有材料库存信息
+     */
+    @GetMapping("/materials")
+    public ResponseEntity<?> getAllMaterials() {
+        try {
+            List<Material> materials = adminService.getAllMaterials();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取材料库存列表成功",
+                "data", materials,
+                "count", materials.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取材料库存列表失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 根据材料类型获取材料库存
+     */
+    @GetMapping("/materials/by-type")
+    public ResponseEntity<?> getMaterialsByType(@RequestParam String type) {
+        try {
+            MaterialType materialType = MaterialType.valueOf(type.toUpperCase());
+            List<Material> materials = adminService.getMaterialsByType(materialType);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取指定类型材料库存成功",
+                "data", materials,
+                "count", materials.size()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "无效的材料类型：" + type
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取指定类型材料库存失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 根据库存范围获取材料
+     */
+    @GetMapping("/materials/by-stock-range")
+    public ResponseEntity<?> getMaterialsByStockRange(
+            @RequestParam Integer minStock, 
+            @RequestParam Integer maxStock) {
+        try {
+            if (minStock < 0 || maxStock < 0 || minStock > maxStock) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "库存范围参数无效"
+                ));
+            }
+            
+            List<Material> materials = adminService.getMaterialsByStockRange(minStock, maxStock);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取指定库存范围材料成功",
+                "data", materials,
+                "count", materials.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取指定库存范围材料失败：" + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 获取低库存材料（库存小于等于10的材料）
+     */
+    @GetMapping("/materials/low-stock")
+    public ResponseEntity<?> getLowStockMaterials() {
+        try {
+            List<Material> materials = adminService.getMaterialsByStockRange(0, 10);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取低库存材料成功",
+                "data", materials,
+                "count", materials.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取低库存材料失败：" + e.getMessage()
             ));
         }
     }

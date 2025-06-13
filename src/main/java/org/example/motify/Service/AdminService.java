@@ -4,6 +4,7 @@ import org.example.motify.Entity.*;
 import org.example.motify.Repository.*;
 import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
+import org.example.motify.Enum.MaterialType;
 import org.example.motify.util.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,9 @@ public class AdminService {
     
     @Autowired
     private final WageRepository wageRepository;
+
+    @Autowired
+    private final MaterialRepository materialRepository;
 
     public Admin registerAdmin(Admin admin) {
         log.info("Starting admin registration, username: {}", admin.getUsername());
@@ -210,6 +214,42 @@ public class AdminService {
     public List<Wage> getAllWages() {
         log.info("Admin querying all wage records");
         return wageRepository.findAll();
+    }
+
+    /**
+     * 获取所有材料库存信息
+     * 
+     * @return 所有材料库存列表
+     */
+    @Transactional(readOnly = true)
+    public List<Material> getAllMaterials() {
+        log.info("Admin querying all materials");
+        return materialRepository.findAll();
+    }
+
+    /**
+     * 根据材料类型获取材料库存
+     * 
+     * @param type 材料类型
+     * @return 指定类型的材料列表
+     */
+    @Transactional(readOnly = true)
+    public List<Material> getMaterialsByType(MaterialType type) {
+        log.info("Admin querying materials by type: {}", type);
+        return materialRepository.findByType(type);
+    }
+
+    /**
+     * 根据库存范围获取材料
+     * 
+     * @param minStock 最小库存
+     * @param maxStock 最大库存
+     * @return 指定库存范围的材料列表
+     */
+    @Transactional(readOnly = true)
+    public List<Material> getMaterialsByStockRange(Integer minStock, Integer maxStock) {
+        log.info("Admin querying materials by stock range: {} - {}", minStock, maxStock);
+        return materialRepository.findByStockRange(minStock, maxStock);
     }
     
     // =============== 数据统计查询方法 ===============

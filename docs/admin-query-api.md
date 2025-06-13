@@ -6,6 +6,109 @@
 
 ## API接口
 
+### 注册登录接口
+
+#### 1. 管理员注册
+
+**接口地址**: `POST /api/admin/register`
+
+**请求类型**: `application/json`
+
+**请求参数**:
+```json
+{
+    "username": "string",     // 用户名，必填，3-20个字符，唯一
+    "password": "string",     // 密码，必填，8位以上
+    "name": "string",         // 姓名，必填，不超过50个字符
+    "email": "string"         // 邮箱，必填，有效邮箱格式
+}
+```
+
+**响应示例**:
+- **成功响应** (200):
+```json
+{
+    "data": {
+        "adminId": 16,
+        "username": "鹤望兰号",
+        "password": null,
+        "name": "02",
+        "email": "234567@test.com",
+        "lastLoginTime": "2025-06-13T19:53:53.5970353",
+        "active": true
+    },
+    "message": "管理员注册成功",
+    "success": true
+}
+```
+
+- **失败响应** (400):
+```json
+{
+    "success": false,
+    "message": "用户名已存在"
+}
+```
+
+**可能的错误信息**:
+- `用户名不能为空`
+- `密码不能为空`
+- `姓名不能为空`
+- `邮箱不能为空`
+- `用户名已存在`
+
+#### 2. 管理员登录
+
+**接口地址**: `POST /api/admin/login`
+
+**请求类型**: `application/json`
+
+**请求参数**:
+```json
+{
+    "username": "string",     // 用户名，必填
+    "password": "string"      // 密码，必填
+}
+```
+
+**响应示例**:
+- **成功响应** (200):
+```json
+{
+    "data": {
+        "adminId": 16,
+        "username": "鹤望兰号",
+        "password": null,
+        "name": "02",
+        "email": "234567@test.com",
+        "lastLoginTime": "2025-06-13T19:54:58.193671",
+        "active": true
+    },
+    "message": "登录成功",
+    "success": true
+}
+```
+
+- **失败响应** (400):
+```json
+{
+    "success": false,
+    "message": "用户名或密码错误"
+}
+```
+
+**可能的错误信息**:
+- `用户名不能为空`
+- `密码不能为空`
+- `用户名或密码错误`
+- `账户已被禁用`
+
+**注意事项**:
+1. 所有响应中的密码字段均为 `null`，不返回实际密码以保护安全
+2. 登录成功后会自动更新管理员的最后登录时间
+3. 只有激活状态的管理员账户才能登录
+4. 密码在数据库中以加密形式存储
+
 ### 基本查询接口
 
 #### 1. 获取管理员信息
@@ -674,6 +777,200 @@
 }
 ```
 
+#### 8. 获取所有材料库存信息
+
+**接口地址**: `GET /api/admin/materials`
+
+**功能**: 获取系统中所有材料的库存信息
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取材料库存列表成功",
+    "count": 12,
+    "data": [
+        {
+            "materialId": 1,
+            "name": "5W-30全合成机油",
+            "description": "高品质全合成机油，适用于大部分汽车",
+            "type": "OIL",
+            "stock": 50,
+            "price": 89.0
+        },
+        {
+            "materialId": 2,
+            "name": "机油滤芯",
+            "description": "高效过滤机油杂质",
+            "type": "FILTER",
+            "stock": 30,
+            "price": 25.0
+        },
+        {
+            "materialId": 3,
+            "name": "空气滤芯",
+            "description": "高效空气过滤器",
+            "type": "FILTER",
+            "stock": 8,
+            "price": 45.0
+        },
+        {
+            "materialId": 4,
+            "name": "前刹车片",
+            "description": "陶瓷刹车片，制动效果好",
+            "type": "BRAKE",
+            "stock": 15,
+            "price": 180.0
+        },
+        {
+            "materialId": 5,
+            "name": "米其林轮胎",
+            "description": "225/60R16规格轮胎",
+            "type": "TIRE",
+            "stock": 20,
+            "price": 680.0
+        }
+    ]
+}
+```
+
+**材料字段说明**:
+- `materialId`: 材料唯一标识符
+- `name`: 材料名称
+- `description`: 材料描述
+- `type`: 材料类型（OIL、FILTER、BRAKE、TIRE、BATTERY、ELECTRICAL、BODY、OTHER）
+- `stock`: 当前库存数量
+- `price`: 材料单价
+
+**材料类型说明**:
+- `OIL`: 机油
+- `FILTER`: 滤芯
+- `BRAKE`: 刹车系统
+- `TIRE`: 轮胎
+- `BATTERY`: 电池
+- `ELECTRICAL`: 电气系统
+- `BODY`: 车身部件
+- `OTHER`: 其他
+
+#### 9. 根据材料类型获取库存
+
+**接口地址**: `GET /api/admin/materials/by-type?type={type}`
+
+**请求参数**:
+- `type` (必填): 材料类型（OIL、FILTER、BRAKE、TIRE、BATTERY、ELECTRICAL、BODY、OTHER）
+
+**功能**: 获取指定类型的所有材料库存信息
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取指定类型材料库存成功",
+    "count": 2,
+    "data": [
+        {
+            "materialId": 2,
+            "name": "机油滤芯",
+            "description": "高效过滤机油杂质",
+            "type": "FILTER",
+            "stock": 30,
+            "price": 25.0
+        },
+        {
+            "materialId": 3,
+            "name": "空气滤芯",
+            "description": "高效空气过滤器",
+            "type": "FILTER",
+            "stock": 8,
+            "price": 45.0
+        }
+    ]
+}
+```
+
+#### 10. 根据库存范围获取材料
+
+**接口地址**: `GET /api/admin/materials/by-stock-range?minStock={minStock}&maxStock={maxStock}`
+
+**请求参数**:
+- `minStock` (必填): 最小库存数量
+- `maxStock` (必填): 最大库存数量
+
+**功能**: 获取库存数量在指定范围内的材料
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取指定库存范围材料成功",
+    "count": 2,
+    "data": [
+        {
+            "materialId": 3,
+            "name": "空气滤芯",
+            "description": "高效空气过滤器",
+            "type": "FILTER",
+            "stock": 8,
+            "price": 45.0
+        },
+        {
+            "materialId": 7,
+            "name": "蓄电池",
+            "description": "60Ah免维护蓄电池",
+            "type": "BATTERY",
+            "stock": 5,
+            "price": 450.0
+        }
+    ]
+}
+```
+
+#### 11. 获取低库存材料
+
+**接口地址**: `GET /api/admin/materials/low-stock`
+
+**功能**: 获取库存数量较低（≤10）的材料，用于库存预警
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取低库存材料成功",
+    "count": 3,
+    "data": [
+        {
+            "materialId": 3,
+            "name": "空气滤芯",
+            "description": "高效空气过滤器",
+            "type": "FILTER",
+            "stock": 8,
+            "price": 45.0
+        },
+        {
+            "materialId": 7,
+            "name": "蓄电池",
+            "description": "60Ah免维护蓄电池",
+            "type": "BATTERY",
+            "stock": 5,
+            "price": 450.0
+        },
+        {
+            "materialId": 9,
+            "name": "补胎胶",
+            "description": "轮胎修补专用胶",
+            "type": "TIRE",
+            "stock": 3,
+            "price": 15.0
+        }
+    ]
+}
+```
+
+**库存管理建议**:
+- 定期检查低库存材料，及时补充
+- 根据使用频率和维修需求调整库存水平
+- 对于关键材料建议保持较高库存水平
+
 ## 数据统计查询接口
 
 ### 1. 统计各车型的维修次数与平均维修费用
@@ -1203,59 +1500,7 @@
 2. 用户和维修人员密码字段在响应中被自动清除
 3. 建议在生产环境中添加适当的访问控制和日志记录
 
-## 使用示例
 
-### 基本查询示例
-
-#### 获取用户列表
-```bash
-curl -X GET "http://localhost:8080/api/admin/users" \
-     -H "Content-Type: application/json"
-```
-
-#### 获取维修工单列表
-```bash
-curl -X GET "http://localhost:8080/api/admin/maintenance-items" \
-     -H "Content-Type: application/json"
-```
-
-### 统计查询示例
-
-#### 获取车型维修统计
-```bash
-curl -X GET "http://localhost:8080/api/admin/statistics/car-model-repairs" \
-     -H "Content-Type: application/json"
-```
-
-#### 获取特定车型故障统计
-```bash
-curl -X GET "http://localhost:8080/api/admin/statistics/car-model-faults?brand=丰田&model=凯美瑞" \
-     -H "Content-Type: application/json"
-```
-
-#### 获取月度费用分析
-```bash
-curl -X GET "http://localhost:8080/api/admin/statistics/monthly-cost-analysis?startDate=2024-01-01&endDate=2024-12-31" \
-     -H "Content-Type: application/json"
-```
-
-#### 获取负面反馈工单
-```bash
-curl -X GET "http://localhost:8080/api/admin/statistics/negative-feedback?maxScore=2" \
-     -H "Content-Type: application/json"
-```
-
-#### 获取工种任务统计
-```bash
-curl -X GET "http://localhost:8080/api/admin/statistics/repairman-type-tasks?startDate=2024-01-01&endDate=2024-12-31" \
-     -H "Content-Type: application/json"
-```
-
-#### 获取未完成任务概览
-```bash
-curl -X GET "http://localhost:8080/api/admin/statistics/uncompleted-tasks-overview" \
-     -H "Content-Type: application/json"
-```
 
 ## 性能优化建议
 
