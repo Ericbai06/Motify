@@ -1,8 +1,10 @@
 package org.example.motify.Service;
 
 import org.example.motify.Entity.User;
+import org.example.motify.Entity.UserHistory;
 import org.example.motify.Enum.RepairmanType;
 import org.example.motify.Repository.UserRepository;
+import org.example.motify.Repository.UserHistoryRepository;
 import org.example.motify.Repository.CarRepository;
 import org.example.motify.Repository.MaintenanceItemRepository;
 import org.example.motify.Entity.Car;
@@ -46,6 +48,9 @@ class UserServiceTest {
     @Mock
     private RepairmanRepository repairmanRepository;
 
+    @Mock
+    private UserHistoryRepository userHistoryRepository;
+
     @InjectMocks
     private UserService userService;
 
@@ -57,7 +62,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        
+
         // 设置测试数据
         testUser = new User();
         testUser.setUserId(1L);
@@ -66,14 +71,14 @@ class UserServiceTest {
         testUser.setPhone("13800138000");
         testUser.setName("测试用户");
         testUser.setEmail("test@example.com");
-        
+
         testCar = new Car();
         testCar.setCarId(1L);
         testCar.setBrand("Toyota");
         testCar.setModel("Camry");
         testCar.setLicensePlate("京A12345");
         testCar.setUser(testUser);
-        
+
         testMaintenanceItem = new MaintenanceItem();
         testMaintenanceItem.setItemId(1L);
         testMaintenanceItem.setName("发动机维修");
@@ -83,7 +88,7 @@ class UserServiceTest {
         testMaintenanceItem.setCost(0.0);
         testMaintenanceItem.setCreateTime(LocalDateTime.now());
         testMaintenanceItem.setCar(testCar);
-        
+
         testRepairman = new Repairman();
         testRepairman.setRepairmanId(1L);
         testRepairman.setUsername("repairman1");
@@ -102,7 +107,7 @@ class UserServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         User result = userService.register(user);
-        
+
         assertNotNull(result);
         assertEquals("newUser", result.getUsername());
         verify(userRepository).save(any(User.class));
@@ -137,7 +142,7 @@ class UserServiceTest {
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(testUser));
 
         Optional<User> result = userService.login("testUser", "password123");
-        
+
         assertTrue(result.isPresent());
         assertEquals("testUser", result.get().getUsername());
     }
@@ -146,16 +151,14 @@ class UserServiceTest {
     void loginUser_WrongPassword() {
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(testUser));
 
-        assertThrows(AuthenticationException.class, () -> 
-            userService.login("testUser", "wrongPassword"));
+        assertThrows(AuthenticationException.class, () -> userService.login("testUser", "wrongPassword"));
     }
 
     @Test
     void loginUser_UserNotFound() {
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(AuthenticationException.class, () -> 
-            userService.login("nonExistentUser", "password123"));
+        assertThrows(AuthenticationException.class, () -> userService.login("nonExistentUser", "password123"));
     }
 
     @Test
@@ -199,13 +202,13 @@ class UserServiceTest {
 
         when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.updateUser(1L, updateDetails));
+        assertThrows(ResourceNotFoundException.class, () -> userService.updateUser(1L, updateDetails));
     }
 
     @Test
     void getUserCarsSafe_Success() {
-        Object[] carData = {1L, "Toyota", "Camry", "京A12345", 1L, "testUser", "测试用户", "13800138000", "test@example.com"};
+        Object[] carData = { 1L, "Toyota", "Camry", "京A12345", 1L, "testUser", "测试用户", "13800138000",
+                "test@example.com" };
         List<Object[]> carResults = Arrays.<Object[]>asList(carData);
 
         when(userRepository.existsById(anyLong())).thenReturn(true);
@@ -226,8 +229,7 @@ class UserServiceTest {
     void getUserCarsSafe_UserNotFound() {
         when(userRepository.existsById(anyLong())).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.getUserCarsSafe(1L));
+        assertThrows(ResourceNotFoundException.class, () -> userService.getUserCarsSafe(1L));
     }
 
     @Test
@@ -258,8 +260,7 @@ class UserServiceTest {
 
         when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.addCar(1L, newCar));
+        assertThrows(ResourceNotFoundException.class, () -> userService.addCar(1L, newCar));
     }
 
     @Test
@@ -271,8 +272,7 @@ class UserServiceTest {
 
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
 
-        assertThrows(BadRequestException.class, () -> 
-            userService.addCar(1L, newCar));
+        assertThrows(BadRequestException.class, () -> userService.addCar(1L, newCar));
     }
 
     @Test
@@ -293,8 +293,7 @@ class UserServiceTest {
     void getUserMaintenanceItems_UserNotFound() {
         when(userRepository.existsById(anyLong())).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.getUserMaintenanceItems(1L));
+        assertThrows(ResourceNotFoundException.class, () -> userService.getUserMaintenanceItems(1L));
     }
 
     @Test
@@ -304,17 +303,17 @@ class UserServiceTest {
         pendingItem.setItemId(1L);
         pendingItem.setName("刹车片更换");
         pendingItem.setStatus(MaintenanceStatus.PENDING);
-        
+
         MaintenanceItem inProgressItem = new MaintenanceItem();
         inProgressItem.setItemId(2L);
         inProgressItem.setName("发动机维修");
         inProgressItem.setStatus(MaintenanceStatus.IN_PROGRESS);
-        
+
         MaintenanceItem completedItem = new MaintenanceItem();
         completedItem.setItemId(3L);
         completedItem.setName("轮胎更换");
         completedItem.setStatus(MaintenanceStatus.COMPLETED);
-        
+
         List<MaintenanceItem> allItems = Arrays.asList(pendingItem, inProgressItem, completedItem);
 
         when(userRepository.existsById(anyLong())).thenReturn(true);
@@ -335,12 +334,12 @@ class UserServiceTest {
         pendingItem.setItemId(1L);
         pendingItem.setName("刹车片更换");
         pendingItem.setStatus(MaintenanceStatus.PENDING);
-        
+
         MaintenanceItem completedItem = new MaintenanceItem();
         completedItem.setItemId(2L);
         completedItem.setName("轮胎更换");
         completedItem.setStatus(MaintenanceStatus.COMPLETED);
-        
+
         List<MaintenanceItem> allItems = Arrays.asList(pendingItem, completedItem);
 
         when(userRepository.existsById(anyLong())).thenReturn(true);
@@ -356,8 +355,7 @@ class UserServiceTest {
     void getUserCurrentMaintenanceItems_UserNotFound() {
         when(userRepository.existsById(anyLong())).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.getUserCurrentMaintenanceItems(1L));
+        assertThrows(ResourceNotFoundException.class, () -> userService.getUserCurrentMaintenanceItems(1L));
     }
 
     @Test
@@ -368,7 +366,7 @@ class UserServiceTest {
         when(carRepository.findById(anyLong())).thenReturn(Optional.of(testCar));
         when(repairmanRepository.findAll()).thenReturn(repairmen);
         when(maintenanceItemRepository.save(any(MaintenanceItem.class)))
-            .thenAnswer(i -> i.getArgument(0));
+                .thenAnswer(i -> i.getArgument(0));
 
         MaintenanceItem result = userService.submitRepairRequest(1L, 1L, "发动机维修", "发动机需要检修");
 
@@ -382,7 +380,7 @@ class UserServiceTest {
         assertEquals(testCar, result.getCar());
         assertFalse(result.getRepairmen().isEmpty());
         assertEquals(testRepairman, result.getRepairmen().get(0));
-        
+
         verify(maintenanceItemRepository).save(any(MaintenanceItem.class));
     }
 
@@ -390,8 +388,7 @@ class UserServiceTest {
     void submitRepairRequest_UserNotFound() {
         when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.submitRepairRequest(1L, 1L, "维修项目", "维修描述"));
+        assertThrows(ResourceNotFoundException.class, () -> userService.submitRepairRequest(1L, 1L, "维修项目", "维修描述"));
     }
 
     @Test
@@ -399,8 +396,7 @@ class UserServiceTest {
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
         when(carRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.submitRepairRequest(1L, 1L, "维修项目", "维修描述"));
+        assertThrows(ResourceNotFoundException.class, () -> userService.submitRepairRequest(1L, 1L, "维修项目", "维修描述"));
     }
 
     @Test
@@ -408,7 +404,7 @@ class UserServiceTest {
         User anotherUser = new User();
         anotherUser.setUserId(2L);
         anotherUser.setUsername("anotherUser");
-        
+
         Car anotherCar = new Car();
         anotherCar.setCarId(1L);
         anotherCar.setUser(anotherUser);
@@ -416,8 +412,7 @@ class UserServiceTest {
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
         when(carRepository.findById(anyLong())).thenReturn(Optional.of(anotherCar));
 
-        assertThrows(BadRequestException.class, () -> 
-            userService.submitRepairRequest(1L, 1L, "维修项目", "维修描述"));
+        assertThrows(BadRequestException.class, () -> userService.submitRepairRequest(1L, 1L, "维修项目", "维修描述"));
     }
 
     @Test
@@ -425,8 +420,7 @@ class UserServiceTest {
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
         when(carRepository.findById(anyLong())).thenReturn(Optional.of(testCar));
 
-        assertThrows(BadRequestException.class, () -> 
-            userService.submitRepairRequest(1L, 1L, "维修项目", ""));
+        assertThrows(BadRequestException.class, () -> userService.submitRepairRequest(1L, 1L, "维修项目", ""));
     }
 
     @Test
@@ -434,8 +428,7 @@ class UserServiceTest {
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
         when(carRepository.findById(anyLong())).thenReturn(Optional.of(testCar));
 
-        assertThrows(BadRequestException.class, () -> 
-            userService.submitRepairRequest(1L, 1L, "", "维修描述"));
+        assertThrows(BadRequestException.class, () -> userService.submitRepairRequest(1L, 1L, "", "维修描述"));
     }
 
     @Test
@@ -443,9 +436,8 @@ class UserServiceTest {
         when(userRepository.findByPhone(anyString())).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        assertDoesNotThrow(() -> 
-            userService.resetPassword("13800138000", "123456", "newPassword123"));
-        
+        assertDoesNotThrow(() -> userService.resetPassword("13800138000", "123456", "newPassword123"));
+
         verify(userRepository).save(any(User.class));
     }
 
@@ -453,22 +445,21 @@ class UserServiceTest {
     void resetPassword_UserNotFound() {
         when(userRepository.findByPhone(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> 
-            userService.resetPassword("13800138000", "123456", "newPassword123"));
+        assertThrows(ResourceNotFoundException.class,
+                () -> userService.resetPassword("13800138000", "123456", "newPassword123"));
     }
 
     @Test
     void resetPassword_InvalidPhone() {
-        assertThrows(BadRequestException.class, () -> 
-            userService.resetPassword("invalid-phone", "123456", "newPassword123"));
+        assertThrows(BadRequestException.class,
+                () -> userService.resetPassword("invalid-phone", "123456", "newPassword123"));
     }
 
     @Test
     void resetPassword_WeakPassword() {
         when(userRepository.findByPhone(anyString())).thenReturn(Optional.of(testUser));
 
-        assertThrows(BadRequestException.class, () -> 
-            userService.resetPassword("13800138000", "123456", "123"));
+        assertThrows(BadRequestException.class, () -> userService.resetPassword("13800138000", "123456", "123"));
     }
 
     // Test for submitRushOrder method
@@ -478,27 +469,27 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         String reminderMessage = "请加急处理，明天需要用车";
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(user);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setName("刹车片更换");
         item.setStatus(MaintenanceStatus.IN_PROGRESS);
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenReturn(item);
-        
+
         // Act
         MaintenanceItem result = userService.submitRushOrder(userId, itemId, reminderMessage);
-        
+
         // Assert
         assertNotNull(result);
         assertEquals(reminderMessage, result.getReminder());
@@ -512,10 +503,10 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         String reminderMessage = "";
-        
+
         // Act & Assert
-        BadRequestException exception = assertThrows(BadRequestException.class, 
-            () -> userService.submitRushOrder(userId, itemId, reminderMessage));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> userService.submitRushOrder(userId, itemId, reminderMessage));
         assertEquals("催单信息不能为空", exception.getMessage());
     }
 
@@ -525,12 +516,12 @@ class UserServiceTest {
         Long userId = 999L;
         Long itemId = 1L;
         String reminderMessage = "请加急处理";
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
-        
+
         // Act & Assert
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, 
-            () -> userService.submitRushOrder(userId, itemId, reminderMessage));
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> userService.submitRushOrder(userId, itemId, reminderMessage));
         assertTrue(exception.getMessage().contains("User"));
     }
 
@@ -540,16 +531,16 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 999L;
         String reminderMessage = "请加急处理";
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.empty());
-        
+
         // Act & Assert
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, 
-            () -> userService.submitRushOrder(userId, itemId, reminderMessage));
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> userService.submitRushOrder(userId, itemId, reminderMessage));
         assertTrue(exception.getMessage().contains("MaintenanceItem"));
     }
 
@@ -559,27 +550,27 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         String reminderMessage = "请加急处理";
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         User otherUser = new User();
         otherUser.setUserId(2L);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(otherUser);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
-        
+
         // Act & Assert
-        BadRequestException exception = assertThrows(BadRequestException.class, 
-            () -> userService.submitRushOrder(userId, itemId, reminderMessage));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> userService.submitRushOrder(userId, itemId, reminderMessage));
         assertEquals("无权限操作该维修项目", exception.getMessage());
     }
 
@@ -589,25 +580,25 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         String reminderMessage = "请加急处理";
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(user);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setStatus(MaintenanceStatus.COMPLETED);
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
-        
+
         // Act & Assert
-        BadRequestException exception = assertThrows(BadRequestException.class, 
-            () -> userService.submitRushOrder(userId, itemId, reminderMessage));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> userService.submitRushOrder(userId, itemId, reminderMessage));
         assertEquals("该维修项目已完成，无法催单", exception.getMessage());
     }
 
@@ -618,28 +609,28 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         Integer score = 5;
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(user);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setName("刹车片更换");
         item.setStatus(MaintenanceStatus.COMPLETED);
         item.setScore(null); // 未评分
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
         when(maintenanceItemRepository.save(any(MaintenanceItem.class))).thenReturn(item);
-        
+
         // Act
         MaintenanceItem result = userService.submitServiceRating(userId, itemId, score);
-        
+
         // Assert
         assertNotNull(result);
         assertEquals(score, result.getScore());
@@ -653,16 +644,16 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         Integer score = 6; // 超出范围
-        
+
         // Act & Assert
-        BadRequestException exception = assertThrows(BadRequestException.class, 
-            () -> userService.submitServiceRating(userId, itemId, score));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> userService.submitServiceRating(userId, itemId, score));
         assertEquals("评分必须在1-5分之间", exception.getMessage());
-        
+
         // 测试负数评分
         Integer zeroScore = 0;
-        BadRequestException exception2 = assertThrows(BadRequestException.class, 
-            () -> userService.submitServiceRating(userId, itemId, zeroScore));
+        BadRequestException exception2 = assertThrows(BadRequestException.class,
+                () -> userService.submitServiceRating(userId, itemId, zeroScore));
         assertEquals("评分必须在1-5分之间", exception2.getMessage());
     }
 
@@ -672,25 +663,25 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         Integer score = 5;
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(user);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setStatus(MaintenanceStatus.IN_PROGRESS); // 未完成
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
-        
+
         // Act & Assert
-        BadRequestException exception = assertThrows(BadRequestException.class, 
-            () -> userService.submitServiceRating(userId, itemId, score));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> userService.submitServiceRating(userId, itemId, score));
         assertEquals("只有已完成的维修项目才能评分", exception.getMessage());
     }
 
@@ -700,26 +691,26 @@ class UserServiceTest {
         Long userId = 1L;
         Long itemId = 1L;
         Integer score = 5;
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(user);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setStatus(MaintenanceStatus.COMPLETED);
         item.setScore(4); // 已经评分
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
-        
+
         // Act & Assert
-        BadRequestException exception = assertThrows(BadRequestException.class, 
-            () -> userService.submitServiceRating(userId, itemId, score));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> userService.submitServiceRating(userId, itemId, score));
         assertEquals("该维修项目已经评分，无法重复评分", exception.getMessage());
     }
 
@@ -729,14 +720,14 @@ class UserServiceTest {
         // Arrange
         Long userId = 1L;
         Long itemId = 1L;
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(user);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setName("刹车片更换");
@@ -745,13 +736,13 @@ class UserServiceTest {
         item.setScore(5);
         item.setReminder("请加急处理");
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
-        
+
         // Act
         MaintenanceItem result = userService.getMaintenanceItemDetail(userId, itemId);
-        
+
         // Assert
         assertNotNull(result);
         assertEquals(itemId, result.getItemId());
@@ -765,27 +756,131 @@ class UserServiceTest {
         // Arrange
         Long userId = 1L;
         Long itemId = 1L;
-        
+
         User user = new User();
         user.setUserId(userId);
-        
+
         User otherUser = new User();
         otherUser.setUserId(2L);
-        
+
         Car car = new Car();
         car.setCarId(1L);
         car.setUser(otherUser);
-        
+
         MaintenanceItem item = new MaintenanceItem();
         item.setItemId(itemId);
         item.setCar(car);
-        
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(maintenanceItemRepository.findById(itemId)).thenReturn(Optional.of(item));
-        
+
         // Act & Assert
-        BadRequestException exception = assertThrows(BadRequestException.class, 
-            () -> userService.getMaintenanceItemDetail(userId, itemId));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> userService.getMaintenanceItemDetail(userId, itemId));
         assertEquals("无权限查看该维修项目", exception.getMessage());
+    }
+
+    // 注意：getUserHistories 方法在 UserService 中不存在，
+    // 历史记录功能通过 undo/redo 方法实现，相关测试在下面的撤销功能测试中涵盖
+
+    // --- 撤销功能综合测试 ---
+
+    @Test
+    void testUndoUserHistory_Success() {
+        Long userId = 1L;
+        UserHistory h1 = new UserHistory();
+        h1.setId(1L);
+        h1.setUserId(userId);
+        h1.setUsername("v1");
+        h1.setOperationTime(LocalDateTime.now().minusMinutes(2));
+        UserHistory h2 = new UserHistory();
+        h2.setId(2L);
+        h2.setUserId(userId);
+        h2.setUsername("v2");
+        h2.setOperationTime(LocalDateTime.now().minusMinutes(1));
+        List<UserHistory> histories = List.of(h2, h1); // 按时间降序
+        User user = new User();
+        user.setUserId(userId);
+        when(userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId)).thenReturn(histories);
+        when(userHistoryRepository.findById(1L)).thenReturn(Optional.of(h1));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenReturn(user);
+        UserService service = new UserService(userRepository, carRepository, maintenanceItemRepository,
+                repairmanRepository, userHistoryRepository);
+        User result = service.undoUserHistory(userId);
+        assertNotNull(result);
+        verify(userRepository).save(any());
+    }
+
+    @Test
+    void testUndoUserHistory_NoHistory() {
+        Long userId = 1L;
+        when(userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId)).thenReturn(List.of());
+        UserService service = new UserService(userRepository, carRepository, maintenanceItemRepository,
+                repairmanRepository, userHistoryRepository);
+        assertThrows(BadRequestException.class, () -> service.undoUserHistory(userId));
+    }
+
+    @Test
+    void testUndoUserHistory_OnlyOneHistory() {
+        Long userId = 1L;
+        UserHistory h1 = new UserHistory();
+        h1.setId(1L);
+        h1.setUserId(userId);
+        h1.setUsername("v1");
+        h1.setOperationTime(LocalDateTime.now());
+        when(userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId)).thenReturn(List.of(h1));
+        UserService service = new UserService(userRepository, carRepository, maintenanceItemRepository,
+                repairmanRepository, userHistoryRepository);
+        assertThrows(BadRequestException.class, () -> service.undoUserHistory(userId));
+    }
+
+    @Test
+    void testRedoUserHistory_Success() {
+        Long userId = 1L;
+        LocalDateTime t1 = LocalDateTime.now().minusMinutes(2);
+        LocalDateTime t2 = LocalDateTime.now().minusMinutes(1);
+        UserHistory h1 = new UserHistory();
+        h1.setId(1L);
+        h1.setUserId(userId);
+        h1.setUsername("v1");
+        h1.setOperationTime(t1);
+        UserHistory h2 = new UserHistory();
+        h2.setId(2L);
+        h2.setUserId(userId);
+        h2.setUsername("v2");
+        h2.setOperationTime(t2);
+        List<UserHistory> histories = List.of(h2, h1); // 降序
+        User user = new User();
+        user.setUserId(userId);
+        when(userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId)).thenReturn(histories);
+        when(userHistoryRepository.findTop1ByUserIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(eq(userId),
+                eq(t2))).thenReturn(h1);
+        when(userHistoryRepository.findById(1L)).thenReturn(Optional.of(h1));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenReturn(user);
+        UserService service = new UserService(userRepository, carRepository, maintenanceItemRepository,
+                repairmanRepository, userHistoryRepository);
+        User result = service.redoUserHistory(userId);
+        assertNotNull(result);
+        verify(userRepository).save(any());
+    }
+
+    @Test
+    void testRedoUserHistory_NoRedo() {
+        Long userId = 1L;
+        LocalDateTime t2 = LocalDateTime.now().minusMinutes(1);
+        UserHistory h2 = new UserHistory();
+        h2.setId(2L);
+        h2.setUserId(userId);
+        h2.setUsername("v2");
+        h2.setOperationTime(t2);
+        List<UserHistory> histories = List.of(h2);
+        when(userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId)).thenReturn(histories);
+        when(userHistoryRepository.findTop1ByUserIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(eq(userId),
+                eq(t2))).thenReturn(null);
+        UserService service = new UserService(userRepository, carRepository, maintenanceItemRepository,
+                repairmanRepository, userHistoryRepository);
+        assertThrows(BadRequestException.class, () -> service.redoUserHistory(userId));
     }
 }

@@ -39,6 +39,8 @@ public class RepairmanService {
     private final RequiredRepairmanTypeRepository requiredTypeRepository;
     @Autowired
     private final CarRepository carRepository;
+    @Autowired
+    private final RepairmanHistoryRepository repairmanHistoryRepository;
 
     // 初始化默认薪资标准
     @Transactional
@@ -114,7 +116,7 @@ public class RepairmanService {
 
             // 如果仍然没有找到，使用一个固定的默认值
             if (salary == null) {
-                repairman.setHourlyRate(50.0f); // 默认时薪
+                repairman.setHourlyRate(50.0f); // 默��时薪
                 repairman.setType(defaultType);
                 return repairmanRepository.save(repairman);
             }
@@ -208,8 +210,13 @@ public class RepairmanService {
         if (repairman.getRepairmanId() == null) {
             throw new BadRequestException("维修人员ID不能为空");
         }
-        if (!repairmanRepository.existsById(repairman.getRepairmanId())) {
-            throw new ResourceNotFoundException("Repairman", "id", repairman.getRepairmanId());
+        Repairman old = repairmanRepository.findById(repairman.getRepairmanId())
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairman.getRepairmanId()));
+        // 保存历史记录
+        saveRepairmanHistory(old, "UPDATE", "system");
+        // 修复：如果新对象的password为null或空，则保留原有密码
+        if (repairman.getPassword() == null || repairman.getPassword().isEmpty()) {
+            repairman.setPassword(old.getPassword());
         }
         return repairmanRepository.save(repairman);
     }
@@ -348,7 +355,7 @@ public class RepairmanService {
         // 找出此维修人员的工种
         RepairmanType type = repairman.getType();
 
-        // 更新对应工种的已分配数量
+        // 更新对��工种的已分配数量
         for (RequiredRepairmanType requirement : item.getRequiredTypes()) {
             if (requirement.getType() == type) {
                 requirement.setAssigned(requirement.getAssigned() - 1);
@@ -656,7 +663,7 @@ public class RepairmanService {
         MaintenanceItem refreshedItem = maintenanceItemRepository.findById(savedItem.getItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", savedItem.getItemId()));
 
-        // 从数据库加载这个工单的所有工种需求
+        // 从数据���加载这个工单的所有工种需求
         List<RequiredRepairmanType> requirements = requiredTypeRepository
                 .findByMaintenanceItem_ItemId(refreshedItem.getItemId());
 
@@ -667,7 +674,7 @@ public class RepairmanService {
             if (needed <= 0)
                 continue;
 
-            // 查询该工种维修人员并按当前工作量排序
+            // 查询该工种维修人员并���������当前工作量排序
             List<Repairman> availableRepairmen = repairmanRepository.findByTypeOrderByWorkloadAsc(type);
 
             // 分配需要的数量
@@ -688,5 +695,98 @@ public class RepairmanService {
 
         // 如果有变更，保存维修工单
         maintenanceItemRepository.save(refreshedItem);
+    }
+
+    private void saveRepairmanHistory(Repairman repairman, String operation, String operator) {
+        RepairmanHistory history = new RepairmanHistory();
+        history.setRepairmanId(repairman.getRepairmanId());
+        history.setUsername(repairman.getUsername());
+        history.setName(repairman.getName());
+        history.setPassword(repairman.getPassword());
+        history.setPhone(repairman.getPhone());
+        history.setEmail(repairman.getEmail());
+        history.setType(repairman.getType() != null ? repairman.getType() : null);
+        history.setOperation(operation);
+        history.setOperator(operator);
+        history.setOperationTime(LocalDateTime.now());
+        repairmanHistoryRepository.save(history);
+    }
+
+    // 回滚维修人员信息到历史版本
+    public Repairman rollbackRepairmanToHistory(Long repairmanId, Long historyId) {
+        RepairmanHistory history = repairmanHistoryRepository.findById(historyId)
+                .orElseThrow(() -> new ResourceNotFoundException("RepairmanHistory", "id", historyId));
+        if (!history.getRepairmanId().equals(repairmanId)) {
+            throw new BadRequestException("历史记录与维修人员ID不匹配");
+        }
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+
+        // 注意：为了避免无限撤销的问题，我们不在撤销操作中保存新的历史记录
+        // 如果需要记录撤销操作，应该在调用此方法的地方单独处理
+
+        // 回滚字段
+        repairman.setUsername(history.getUsername());
+        repairman.setName(history.getName());
+        repairman.setPhone(history.getPhone());
+        repairman.setEmail(history.getEmail());
+        repairman.setPassword(history.getPassword() != null ? history.getPassword() : repairman.getPassword());
+        if (history.getType() != null) {
+            repairman.setType(history.getType());
+        }
+        return repairmanRepository.save(repairman);
+    }
+
+    /**
+     * 连续撤销：回滚到上一个历史版本
+     */
+    public Repairman undoRepairmanHistory(Long repairmanId) {
+        List<RepairmanHistory> histories = repairmanHistoryRepository
+                .findByRepairmanIdOrderByOperationTimeDesc(repairmanId);
+        if (histories.size() < 2) {
+            throw new BadRequestException("没有可撤销的历史记录");
+        }
+        // 获取上一个历史记录（第二新的记录）
+        RepairmanHistory prev = histories.get(1);
+        return rollbackRepairmanToHistory(repairmanId, prev.getId());
+    }
+
+    /**
+     * 连续重做：回滚到下一个历史版本
+     */
+    public Repairman redoRepairmanHistory(Long repairmanId) {
+        List<RepairmanHistory> histories = repairmanHistoryRepository
+                .findByRepairmanIdOrderByOperationTimeDesc(repairmanId);
+        if (histories.isEmpty()) {
+            throw new BadRequestException("没有历史记录");
+        }
+        RepairmanHistory current = histories.get(0);
+        RepairmanHistory next = repairmanHistoryRepository
+                .findTop1ByRepairmanIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(repairmanId,
+                        current.getOperationTime());
+        if (next == null) {
+            throw new BadRequestException("没有可重做的历史记录");
+        }
+        return rollbackRepairmanToHistory(repairmanId, next.getId());
+    }
+
+    /**
+     * 获取维修人员历史撤销/重做能力
+     * @param repairmanId 维修人员ID
+     * @return Map 包含 canUndo 和 canRedo 字段
+     */
+    public Map<String, Boolean> getUndoRedoStatus(Long repairmanId) {
+        List<RepairmanHistory> histories = repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId);
+        boolean canUndo = histories.size() > 1;
+        boolean canRedo = false;
+        if (!histories.isEmpty()) {
+            RepairmanHistory current = histories.get(0);
+            RepairmanHistory next = repairmanHistoryRepository.findTop1ByRepairmanIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(repairmanId, current.getOperationTime());
+            canRedo = next != null;
+        }
+        Map<String, Boolean> result = new java.util.HashMap<>();
+        result.put("canUndo", canUndo);
+        result.put("canRedo", canRedo);
+        return result;
     }
 }

@@ -53,6 +53,9 @@ class RepairmanServiceTest {
     @Mock
     private SalaryRepository salaryRepository;
 
+    @Mock
+    private RequiredRepairmanTypeRepository requiredTypeRepository;
+
     @InjectMocks
     private RepairmanService repairmanService;
 
@@ -471,4 +474,115 @@ class RepairmanServiceTest {
         verify(salaryRepository, times(2)).findByType(RepairmanType.APPRENTICE);
         verify(repairmanRepository, times(2)).save(any(Repairman.class)); // 一次初始save，一次设置默认薪资
     }
+
+    // --- 撤销功能综合测试 ---
+    @Mock
+    private RepairmanHistoryRepository repairmanHistoryRepository;
+
+    @Test
+    void testUndoRepairmanHistory_Success() {
+        Long repairmanId = 1L;
+        RepairmanHistory h1 = new RepairmanHistory();
+        h1.setId(1L);
+        h1.setRepairmanId(repairmanId);
+        h1.setUsername("v1");
+        h1.setOperationTime(LocalDateTime.now().minusMinutes(2));
+        RepairmanHistory h2 = new RepairmanHistory();
+        h2.setId(2L);
+        h2.setRepairmanId(repairmanId);
+        h2.setUsername("v2");
+        h2.setOperationTime(LocalDateTime.now().minusMinutes(1));
+        List<RepairmanHistory> histories = List.of(h2, h1); // 按时间降序
+        Repairman repairman = new Repairman();
+        repairman.setRepairmanId(repairmanId);
+        when(repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId)).thenReturn(histories);
+        when(repairmanHistoryRepository.findById(1L)).thenReturn(Optional.of(h1));
+        when(repairmanRepository.findById(repairmanId)).thenReturn(Optional.of(repairman));
+        when(repairmanRepository.save(any())).thenReturn(repairman);
+        RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
+                materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
+                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+        Repairman result = service.undoRepairmanHistory(repairmanId);
+        assertNotNull(result);
+        verify(repairmanRepository).save(any());
+    }
+
+    @Test
+    void testUndoRepairmanHistory_NoHistory() {
+        Long repairmanId = 1L;
+        when(repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId)).thenReturn(List.of());
+        RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
+                materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
+                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+        assertThrows(BadRequestException.class, () -> service.undoRepairmanHistory(repairmanId));
+    }
+
+    @Test
+    void testUndoRepairmanHistory_OnlyOneHistory() {
+        Long repairmanId = 1L;
+        RepairmanHistory h1 = new RepairmanHistory();
+        h1.setId(1L);
+        h1.setRepairmanId(repairmanId);
+        h1.setUsername("v1");
+        h1.setOperationTime(LocalDateTime.now());
+        when(repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId)).thenReturn(List.of(h1));
+        RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
+                materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
+                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+        assertThrows(BadRequestException.class, () -> service.undoRepairmanHistory(repairmanId));
+    }
+
+    @Test
+    void testRedoRepairmanHistory_Success() {
+        Long repairmanId = 1L;
+        LocalDateTime t1 = LocalDateTime.now().minusMinutes(2);
+        LocalDateTime t2 = LocalDateTime.now().minusMinutes(1);
+        RepairmanHistory h1 = new RepairmanHistory();
+        h1.setId(1L);
+        h1.setRepairmanId(repairmanId);
+        h1.setUsername("v1");
+        h1.setOperationTime(t1);
+        RepairmanHistory h2 = new RepairmanHistory();
+        h2.setId(2L);
+        h2.setRepairmanId(repairmanId);
+        h2.setUsername("v2");
+        h2.setOperationTime(t2);
+        List<RepairmanHistory> histories = List.of(h2, h1); // 降序
+        Repairman repairman = new Repairman();
+        repairman.setRepairmanId(repairmanId);
+        when(repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId)).thenReturn(histories);
+        when(repairmanHistoryRepository
+                .findTop1ByRepairmanIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(eq(repairmanId), eq(t2)))
+                .thenReturn(h1);
+        when(repairmanHistoryRepository.findById(1L)).thenReturn(Optional.of(h1));
+        when(repairmanRepository.findById(repairmanId)).thenReturn(Optional.of(repairman));
+        when(repairmanRepository.save(any())).thenReturn(repairman);
+        RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
+                materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
+                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+        Repairman result = service.redoRepairmanHistory(repairmanId);
+        assertNotNull(result);
+        verify(repairmanRepository).save(any());
+    }
+
+    @Test
+    void testRedoRepairmanHistory_NoRedo() {
+        Long repairmanId = 1L;
+        LocalDateTime t2 = LocalDateTime.now().minusMinutes(1);
+        RepairmanHistory h2 = new RepairmanHistory();
+        h2.setId(2L);
+        h2.setRepairmanId(repairmanId);
+        h2.setUsername("v2");
+        h2.setOperationTime(t2);
+        List<RepairmanHistory> histories = List.of(h2);
+        when(repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId)).thenReturn(histories);
+        when(repairmanHistoryRepository
+                .findTop1ByRepairmanIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(eq(repairmanId), eq(t2)))
+                .thenReturn(null);
+        RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
+                materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
+                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+        assertThrows(BadRequestException.class, () -> service.redoRepairmanHistory(repairmanId));
+    }
 }
+

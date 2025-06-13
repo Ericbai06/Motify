@@ -452,4 +452,78 @@ public class UserController {
         resp.put("uri", request.getRequestURI());
         return resp;
     }
+
+    /**
+     * 用户信息回滚到历史版本
+     */
+    @PostMapping("/{userId}/rollback")
+    public Map<String, Object> rollbackUser(@PathVariable Long userId, @RequestBody Map<String, Object> req) {
+        Long historyId = Long.valueOf(req.get("historyId").toString());
+        User result = userService.rollbackUserToHistory(userId, historyId);
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", result.getUserId());
+        data.put("username", result.getUsername());
+        data.put("name", result.getName());
+        data.put("phone", result.getPhone());
+        data.put("email", result.getEmail());
+        data.put("address", result.getAddress());
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "用户信息已回滚");
+        resp.put("data", data);
+        return resp;
+    }
+
+    /**
+     * 连续撤销用户信息到上一个历史版本
+     */
+    @PostMapping("/{userId}/undo")
+    public Map<String, Object> undoUser(@PathVariable Long userId) {
+        User result = userService.undoUserHistory(userId);
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", result.getUserId());
+        data.put("username", result.getUsername());
+        data.put("name", result.getName());
+        data.put("phone", result.getPhone());
+        data.put("email", result.getEmail());
+        data.put("address", result.getAddress());
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "已撤销到上一个历史版本");
+        resp.put("data", data);
+        return resp;
+    }
+
+    /**
+     * 连续重做用户信息到下一个历史版本
+     */
+    @PostMapping("/{userId}/redo")
+    public Map<String, Object> redoUser(@PathVariable Long userId) {
+        User result = userService.redoUserHistory(userId);
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", result.getUserId());
+        data.put("username", result.getUsername());
+        data.put("name", result.getName());
+        data.put("phone", result.getPhone());
+        data.put("email", result.getEmail());
+        data.put("address", result.getAddress());
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "已重做到下一个历史版本");
+        resp.put("data", data);
+        return resp;
+    }
+
+    /**
+     * 获取用户撤销/重做能力
+     */
+    @GetMapping("/{userId}/undo-redo-status")
+    public Map<String, Object> getUndoRedoStatus(@PathVariable Long userId) {
+        Map<String, Boolean> status = userService.getUndoRedoStatus(userId);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "success");
+        resp.put("data", status);
+        return resp;
+    }
 }

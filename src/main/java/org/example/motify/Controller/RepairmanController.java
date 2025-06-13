@@ -174,7 +174,7 @@ public class RepairmanController {
      *   "repairmanId": 1,
      *   "workHours": 1,
      *   "startTime": "2024-06-02T10:00:00",
-     *   "name": "补胎记录", // 可选
+     *   "name": "�����胎记录", // 可选
      *   "materials": [
      *     {"materialId": 9, "amount": 1},
      *     {"materialId": 10, "amount": 1}
@@ -189,6 +189,44 @@ public class RepairmanController {
     public ResponseEntity<?> addMaintenanceRecord(@RequestBody Map<String, Object> payload) {
         MaintenanceRecord record = repairmanService.addMaintenanceRecord(payload);
         return ExceptionLogger.createSuccessResponse(record);
+    }
+
+    // 回滚维修人员信息到历史版本
+    @PostMapping("/rollback")
+    public ResponseEntity<?> rollbackRepairman(@RequestBody Map<String, Object> req) {
+        Long repairmanId = Long.valueOf(req.get("repairmanId").toString());
+        Long historyId = Long.valueOf(req.get("historyId").toString());
+        Repairman result = repairmanService.rollbackRepairmanToHistory(repairmanId, historyId);
+        return ExceptionLogger.createSuccessResponse(result);
+    }
+
+    /**
+     * 连续撤销维修人员信息到上一个历史版本
+     */
+    @PostMapping("/{repairmanId}/undo")
+    public ResponseEntity<?> undoRepairman(@PathVariable Long repairmanId) {
+        Repairman result = repairmanService.undoRepairmanHistory(repairmanId);
+        return ExceptionLogger.createSuccessResponse(result);
+    }
+
+    /**
+     * 连续重做维修人员信息到下一个历史版本
+     */
+    @PostMapping("/{repairmanId}/redo")
+    public ResponseEntity<?> redoRepairman(@PathVariable Long repairmanId) {
+        Repairman result = repairmanService.redoRepairmanHistory(repairmanId);
+        return ExceptionLogger.createSuccessResponse(result);
+    }
+
+    // 获取维修人员撤销/重做能力
+    @GetMapping("/{repairmanId}/undo-redo-status")
+    public Map<String, Object> getUndoRedoStatus(@PathVariable Long repairmanId) {
+        Map<String, Boolean> status = repairmanService.getUndoRedoStatus(repairmanId);
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("code", 200);
+        resp.put("message", "success");
+        resp.put("data", status);
+        return resp;
     }
 
 }

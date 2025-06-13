@@ -34,6 +34,9 @@ public class UserService {
     @Autowired
     private final RepairmanRepository repairmanRepository;
 
+    @Autowired
+    private final UserHistoryRepository userHistoryRepository;
+
     // 用户注册
     public User register(User user) {
         // 参数验证
@@ -56,7 +59,10 @@ public class UserService {
         user.setPassword(PasswordEncoder.encode(user.getPassword()));
 
         // 保存用户
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        // 新增：注册时保存初始历史记录
+        saveUserHistory(savedUser, "CREATE", "system");
+        return savedUser;
     }
 
     /**
@@ -114,6 +120,8 @@ public class UserService {
      */
     public User updateUser(Long userId, User userDetails) {
         User user = getUserById(userId);
+        // 保存历史记录
+        saveUserHistory(user, "UPDATE", "system");
 
         // 更新用户名
         if (userDetails.getUsername() != null && !userDetails.getUsername().equals(user.getUsername())) {
@@ -195,6 +203,8 @@ public class UserService {
      */
     public User updateUserSelective(Long userId, Map<String, Object> updateFields) {
         User user = getUserById(userId);
+        // 保存历史记录
+        saveUserHistory(user, "UPDATE", "system");
 
         updateFields.forEach((key, value) -> {
             switch (key) {
@@ -268,7 +278,7 @@ public class UserService {
             throw new ResourceNotFoundException("User", "id", userId);
         }
 
-        // 使用原生SQL查询，避免懒加载问题
+        // 使用原生SQL查询，避免懒加载�������题
         List<Object[]> results = carRepository.findCarBasicInfoByUserId(userId);
 
         return results.stream().map(row -> {
@@ -313,7 +323,7 @@ public class UserService {
             throw new BadRequestException("车牌号不能为空");
         }
 
-        // 检查车牌号是否已存在
+        // 检查车牌号是否已存��
         List<Car> existingCars = carRepository.findByLicensePlate(car.getLicensePlate().trim());
         if (!existingCars.isEmpty()) {
             throw new BadRequestException("车牌号 '" + car.getLicensePlate() + "' 已存在，请检查输入");
@@ -391,7 +401,7 @@ public class UserService {
         List<Repairman> availableRepairmen = repairmanRepository.findAll();
         if (!availableRepairmen.isEmpty()) {
             // 为简化实现，这里只分配第一个维修人员
-            // 在实际应用中，可以根据维修类型、负载均衡等因素来选择
+            // 在实际应用中，可以根���维���类���、负载均衡等因素来选择
             maintenanceItem.setRepairmen(List.of(availableRepairmen.get(0)));
         }
 
@@ -485,7 +495,7 @@ public class UserService {
     public MaintenanceItem submitServiceRating(Long userId, Long itemId, Integer score) {
         // 验证参数
         if (score == null || score < 1 || score > 5) {
-            throw new BadRequestException("评分必须在1-5分之间");
+            throw new BadRequestException("评分必��在1-5分之间");
         }
 
         // 验证用户是否存在
@@ -565,6 +575,96 @@ public class UserService {
         return allItems.stream()
                 .filter(item -> item.getStatus() == MaintenanceStatus.IN_PROGRESS)
                 .collect(Collectors.toList());
+    }
+
+    private void saveUserHistory(User user, String operation, String operator) {
+        UserHistory history = new UserHistory();
+        history.setUserId(user.getUserId());
+        history.setUsername(user.getUsername());
+        history.setName(user.getName());
+        history.setPhone(user.getPhone());
+        history.setEmail(user.getEmail());
+        history.setAddress(user.getAddress());
+        history.setOperation(operation);
+        history.setOperator(operator);
+        history.setOperationTime(LocalDateTime.now());
+        userHistoryRepository.save(history);
+    }
+
+    /**
+     * 回滚用户信息到历史版本
+     */
+    public User rollbackUserToHistory(Long userId, Long historyId) {
+        UserHistory history = userHistoryRepository.findById(historyId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserHistory", "id", historyId));
+        if (!history.getUserId().equals(userId)) {
+            throw new BadRequestException("历史记录与用户ID不匹配");
+        }
+        User user = getUserById(userId);
+
+        // 注意：为了避免无限撤销的问题，我们不在撤销操作中保存新的历史记录
+        // 如果需要记录撤销操作，应该在调用此方法的地方单独处理
+
+        // 回滚字段
+        user.setUsername(history.getUsername());
+        user.setName(history.getName());
+        user.setPhone(history.getPhone());
+        user.setEmail(history.getEmail());
+        user.setAddress(history.getAddress());
+        return userRepository.save(user);
+    }
+
+    /**
+     * 连续撤销：回滚到上一个历史版本
+     */
+    public User undoUserHistory(Long userId) {
+        // 获取当前用户最新历史记录
+        List<UserHistory> histories = userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId);
+        if (histories.size() < 2) {
+            throw new BadRequestException("没有可撤销的历史记录");
+        }
+        // 当前最新为 histories[0]，上一个为 histories[1]
+        UserHistory prev = histories.get(1);
+        return rollbackUserToHistory(userId, prev.getId());
+    }
+
+    /**
+     * 连续重做：回滚到下一个历史版本
+     */
+    public User redoUserHistory(Long userId) {
+        // 获取当前用户最新历史记录
+        List<UserHistory> histories = userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId);
+        if (histories.isEmpty()) {
+            throw new BadRequestException("没有历史记录");
+        }
+        UserHistory current = histories.get(0);
+        // 查找 operationTime 更晚的下一条
+        UserHistory next = userHistoryRepository
+                .findTop1ByUserIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(userId, current.getOperationTime());
+        if (next == null) {
+            throw new BadRequestException("没有可重做的历史记录");
+        }
+        return rollbackUserToHistory(userId, next.getId());
+    }
+
+    /**
+     * 获取用户撤销/重做能力
+     * @param userId 用户ID
+     * @return Map 包含 canUndo 和 canRedo 字段
+     */
+    public Map<String, Boolean> getUndoRedoStatus(Long userId) {
+        List<UserHistory> histories = userHistoryRepository.findByUserIdOrderByOperationTimeDesc(userId);
+        boolean canUndo = histories.size() > 1;
+        boolean canRedo = false;
+        if (!histories.isEmpty()) {
+            UserHistory current = histories.get(0);
+            UserHistory next = userHistoryRepository.findTop1ByUserIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(userId, current.getOperationTime());
+            canRedo = next != null;
+        }
+        Map<String, Boolean> result = new HashMap<>();
+        result.put("canUndo", canUndo);
+        result.put("canRedo", canRedo);
+        return result;
     }
 
 }
