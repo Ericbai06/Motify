@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.Optional;
 import java.util.List;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -199,6 +201,20 @@ public class AdminController {
     public ResponseEntity<?> getAllMaintenanceItems() {
         try {
             List<MaintenanceItem> maintenanceItems = adminService.getAllMaintenanceItems();
+            
+            // 清除维修人员密码字段以保护隐私
+            maintenanceItems.forEach(item -> {
+                if (item.getRepairmen() != null) {
+                    item.getRepairmen().forEach(repairman -> repairman.setPassword(null));
+                }
+                if (item.getAcceptedRepairmen() != null) {
+                    item.getAcceptedRepairmen().forEach(repairman -> repairman.setPassword(null));
+                }
+                if (item.getPendingRepairmen() != null) {
+                    item.getPendingRepairmen().forEach(repairman -> repairman.setPassword(null));
+                }
+            });
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "获取维修工单列表成功",
@@ -251,6 +267,335 @@ public class AdminController {
             return ResponseEntity.internalServerError().body(Map.of(
                 "success", false,
                 "message", "获取工时费发放记录列表失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    // =============== 数据统计查询接口 ===============
+    
+    /**
+     * 统计各车型的维修次数与平均维修费用
+     */
+    @GetMapping("/statistics/car-model-repairs")
+    public ResponseEntity<?> getCarModelRepairStatistics() {
+        try {
+            List<Object[]> statistics = adminService.getCarModelRepairStatistics();
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("brand", row[0] != null ? row[0].toString() : "");
+                map.put("model", row[1] != null ? row[1].toString() : "");
+                map.put("repairCount", row[2] != null ? Integer.parseInt(row[2].toString()) : 0);
+                map.put("avgCost", row[3] != null ? Double.parseDouble(row[3].toString()) : 0.0);
+                map.put("totalCost", row[4] != null ? Double.parseDouble(row[4].toString()) : 0.0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取车型维修统计成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取车型维修统计失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 统计特定车型最常出现的故障类型
+     */
+    @GetMapping("/statistics/car-model-faults")
+    public ResponseEntity<?> getCarModelFaultStatistics(
+            @RequestParam String brand, 
+            @RequestParam String model) {
+        try {
+            List<Object[]> statistics = adminService.getCarModelFaultStatistics(brand, model);
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("faultType", row[0] != null ? row[0].toString() : "");
+                map.put("occurrenceCount", row[1] != null ? Integer.parseInt(row[1].toString()) : 0);
+                map.put("avgRepairCost", row[2] != null ? Double.parseDouble(row[2].toString()) : 0.0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取车型故障统计成功",
+                "data", result,
+                "count", result.size(),
+                "brand", brand,
+                "model", model
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取车型故障统计失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 按月份统计维修费用构成
+     */
+    @GetMapping("/statistics/monthly-cost-analysis")
+    public ResponseEntity<?> getMonthlyCostAnalysis(
+            @RequestParam String startDate, 
+            @RequestParam String endDate) {
+        try {
+            List<Object[]> statistics = adminService.getMonthlyCostAnalysis(startDate, endDate);
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("year", row[0] != null ? Integer.parseInt(row[0].toString()) : 0);
+                map.put("month", row[1] != null ? Integer.parseInt(row[1].toString()) : 0);
+                map.put("totalRecords", row[2] != null ? Integer.parseInt(row[2].toString()) : 0);
+                map.put("totalCost", row[3] != null ? Double.parseDouble(row[3].toString()) : 0.0);
+                map.put("totalMaterialCost", row[4] != null ? Double.parseDouble(row[4].toString()) : 0.0);
+                map.put("totalLaborCost", row[5] != null ? Double.parseDouble(row[5].toString()) : 0.0);
+                map.put("materialCostPercentage", row[6] != null ? Double.parseDouble(row[6].toString()) : 0.0);
+                map.put("laborCostPercentage", row[7] != null ? Double.parseDouble(row[7].toString()) : 0.0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取月度费用分析成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取月度费用分析失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 按季度统计维修费用构成
+     */
+    @GetMapping("/statistics/quarterly-cost-analysis")
+    public ResponseEntity<?> getQuarterlyCostAnalysis(
+            @RequestParam String startDate, 
+            @RequestParam String endDate) {
+        try {
+            List<Object[]> statistics = adminService.getQuarterlyCostAnalysis(startDate, endDate);
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("year", row[0] != null ? Integer.parseInt(row[0].toString()) : 0);
+                map.put("quarter", row[1] != null ? Integer.parseInt(row[1].toString()) : 0);
+                map.put("totalRecords", row[2] != null ? Integer.parseInt(row[2].toString()) : 0);
+                map.put("totalCost", row[3] != null ? Double.parseDouble(row[3].toString()) : 0.0);
+                map.put("totalMaterialCost", row[4] != null ? Double.parseDouble(row[4].toString()) : 0.0);
+                map.put("totalLaborCost", row[5] != null ? Double.parseDouble(row[5].toString()) : 0.0);
+                map.put("materialCostPercentage", row[6] != null ? Double.parseDouble(row[6].toString()) : 0.0);
+                map.put("laborCostPercentage", row[7] != null ? Double.parseDouble(row[7].toString()) : 0.0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取季度费用分析成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取季度费用分析失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 筛选负面反馈工单及涉及的员工
+     */
+    @GetMapping("/statistics/negative-feedback")
+    public ResponseEntity<?> getNegativeFeedbackOrders(@RequestParam(defaultValue = "2") Integer maxScore) {
+        try {
+            List<Object[]> statistics = adminService.getNegativeFeedbackOrders(maxScore);
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("itemId", row[0] != null ? Long.parseLong(row[0].toString()) : 0L);
+                map.put("itemName", row[1] != null ? row[1].toString() : "");
+                map.put("score", row[2] != null ? Integer.parseInt(row[2].toString()) : 0);
+                map.put("result", row[3] != null ? row[3].toString() : "");
+                map.put("carBrand", row[4] != null ? row[4].toString() : "");
+                map.put("carModel", row[5] != null ? row[5].toString() : "");
+                map.put("licensePlate", row[6] != null ? row[6].toString() : "");
+                map.put("repairmanId", row[7] != null ? Long.parseLong(row[7].toString()) : 0L);
+                map.put("repairmanName", row[8] != null ? row[8].toString() : "");
+                map.put("repairmanType", row[9] != null ? row[9].toString() : "");
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取负面反馈工单统计成功",
+                "data", result,
+                "count", result.size(),
+                "maxScore", maxScore
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取负面反馈工单统计失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 统计不同工种在一段时间内接受和完成的任务数量及占比
+     */
+    @GetMapping("/statistics/repairman-type-tasks")
+    public ResponseEntity<?> getRepairmanTypeTaskStatistics(
+            @RequestParam String startDate, 
+            @RequestParam String endDate) {
+        try {
+            List<Object[]> statistics = adminService.getRepairmanTypeTaskStatistics(startDate, endDate);
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("repairmanType", row[0] != null ? row[0].toString() : "");
+                map.put("acceptedTasks", row[1] != null ? Integer.parseInt(row[1].toString()) : 0);
+                map.put("completedTasks", row[2] != null ? Integer.parseInt(row[2].toString()) : 0);
+                map.put("acceptedPercentage", row[3] != null ? Double.parseDouble(row[3].toString()) : 0.0);
+                map.put("completedPercentage", row[4] != null ? Double.parseDouble(row[4].toString()) : 0.0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取工种任务统计成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取工种任务统计失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 统计未完成的维修任务概览
+     */
+    @GetMapping("/statistics/uncompleted-tasks-overview")
+    public ResponseEntity<?> getUncompletedTasksOverview() {
+        try {
+            List<Object[]> statistics = adminService.getUncompletedTasksOverview();
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("status", row[0] != null ? row[0].toString() : "");
+                map.put("taskCount", row[1] != null ? Integer.parseInt(row[1].toString()) : 0);
+                map.put("avgDaysPending", row[2] != null ? Integer.parseInt(row[2].toString()) : 0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取未完成任务概览成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取未完成任务概览失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 按工种统计未完成任务
+     */
+    @GetMapping("/statistics/uncompleted-tasks-by-type")
+    public ResponseEntity<?> getUncompletedTasksByRepairmanType() {
+        try {
+            List<Object[]> statistics = adminService.getUncompletedTasksByRepairmanType();
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("repairmanType", row[0] != null ? row[0].toString() : "");
+                map.put("uncompletedTasks", row[1] != null ? Integer.parseInt(row[1].toString()) : 0);
+                map.put("avgDaysPending", row[2] != null ? Integer.parseInt(row[2].toString()) : 0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取工种未完成任务统计成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取工种未完成任务统计失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 按维修人员统计未完成任务
+     */
+    @GetMapping("/statistics/uncompleted-tasks-by-repairman")
+    public ResponseEntity<?> getUncompletedTasksByRepairman() {
+        try {
+            List<Object[]> statistics = adminService.getUncompletedTasksByRepairman();
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("repairmanId", row[0] != null ? Long.parseLong(row[0].toString()) : 0L);
+                map.put("repairmanName", row[1] != null ? row[1].toString() : "");
+                map.put("repairmanType", row[2] != null ? row[2].toString() : "");
+                map.put("uncompletedTasks", row[3] != null ? Integer.parseInt(row[3].toString()) : 0);
+                map.put("avgDaysPending", row[4] != null ? Integer.parseInt(row[4].toString()) : 0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取维修人员未完成任务统计成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取维修人员未完成任务统计失败：" + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 按车辆统计未完成任务
+     */
+    @GetMapping("/statistics/uncompleted-tasks-by-car")
+    public ResponseEntity<?> getUncompletedTasksByCar() {
+        try {
+            List<Object[]> statistics = adminService.getUncompletedTasksByCar();
+            List<Map<String, Object>> result = statistics.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("carId", row[0] != null ? Long.parseLong(row[0].toString()) : 0L);
+                map.put("brand", row[1] != null ? row[1].toString() : "");
+                map.put("model", row[2] != null ? row[2].toString() : "");
+                map.put("licensePlate", row[3] != null ? row[3].toString() : "");
+                map.put("uncompletedTasks", row[4] != null ? Integer.parseInt(row[4].toString()) : 0);
+                map.put("avgDaysPending", row[5] != null ? Integer.parseInt(row[5].toString()) : 0);
+                return map;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "获取车辆未完成任务统计成功",
+                "data", result,
+                "count", result.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "获取车辆未完成任务统计失败：" + e.getMessage()
             ));
         }
     }
