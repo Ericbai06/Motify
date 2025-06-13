@@ -781,31 +781,41 @@
 **响应示例**:
 ```json
 {
-    "success": true,
-    "message": "获取月度费用分析成功",
-    "count": 3,
     "data": [
         {
-            "year": 2024,
+            "totalRecords": 1,
             "month": 6,
-            "totalRecords": 15,
-            "totalCost": 12850.0,
-            "totalMaterialCost": 8965.0,
-            "totalLaborCost": 3885.0,
-            "materialCostPercentage": 69.76,
-            "laborCostPercentage": 30.24
+            "year": 2025,
+            "totalMaterialCost": 428.0,
+            "laborCostPercentage": 31.85,
+            "materialCostPercentage": 68.15,
+            "totalCost": 628.0,
+            "totalLaborCost": 200.0
         },
         {
+            "totalRecords": 2,
+            "month": 6,
             "year": 2024,
+            "totalMaterialCost": 2720.0,
+            "laborCostPercentage": 50.96,
+            "materialCostPercentage": 49.04,
+            "totalCost": 2933.33,
+            "totalLaborCost": 213.33
+        },
+        {
+            "totalRecords": 5,
             "month": 5,
-            "totalRecords": 12,
-            "totalCost": 9680.0,
-            "totalMaterialCost": 6784.0,
-            "totalLaborCost": 2896.0,
-            "materialCostPercentage": 70.08,
-            "laborCostPercentage": 29.92
+            "year": 2024,
+            "totalMaterialCost": 1128.0,
+            "laborCostPercentage": 45.75,
+            "materialCostPercentage": 54.25,
+            "totalCost": 1844.67,
+            "totalLaborCost": 716.67
         }
-    ]
+    ],
+    "count": 3,
+    "message": "获取月度费用分析成功",
+    "success": true
 }
 ```
 
@@ -834,31 +844,31 @@
 **响应示例**:
 ```json
 {
-    "success": true,
-    "message": "获取季度费用分析成功",
-    "count": 2,
     "data": [
         {
-            "year": 2024,
-            "quarter": 2,
-            "totalRecords": 27,
-            "totalCost": 22530.0,
-            "totalMaterialCost": 15749.0,
-            "totalLaborCost": 6781.0,
-            "materialCostPercentage": 69.92,
-            "laborCostPercentage": 30.08
+            "totalRecords": 1,
+            "year": 2025,
+            "totalMaterialCost": 428.0,
+            "laborCostPercentage": 31.85,
+            "materialCostPercentage": 68.15,
+            "totalCost": 628.0,
+            "totalLaborCost": 200.0,
+            "quarter": 2
         },
         {
+            "totalRecords": 7,
             "year": 2024,
-            "quarter": 1,
-            "totalRecords": 18,
-            "totalCost": 14240.0,
-            "totalMaterialCost": 9968.0,
-            "totalLaborCost": 4272.0,
-            "materialCostPercentage": 70.00,
-            "laborCostPercentage": 30.00
+            "totalMaterialCost": 3848.0,
+            "laborCostPercentage": 47.24,
+            "materialCostPercentage": 52.76,
+            "totalCost": 4778.0,
+            "totalLaborCost": 930.0,
+            "quarter": 2
         }
-    ]
+    ],
+    "count": 2,
+    "message": "获取季度费用分析成功",
+    "success": true
 }
 ```
 

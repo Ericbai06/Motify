@@ -77,11 +77,9 @@ class AdminControllerTest {
         // 设置测试维修记录
         testMaintenanceRecord = new MaintenanceRecord();
         testMaintenanceRecord.setRecordId(1L);
-        testMaintenanceRecord.setName("发动机维修记录");
-        testMaintenanceRecord.setDescription("更换了机油和机滤");
+        testMaintenanceRecord.setName("发动机维修记录");        testMaintenanceRecord.setDescription("更换了机油和机滤");
         testMaintenanceRecord.setRepairManId(1L);
         testMaintenanceRecord.setWorkHours(120L); // 2小时
-        testMaintenanceRecord.setCost(500.0);
 
         // 设置测试工资记录
         testWage = new Wage();
@@ -179,12 +177,10 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("获取历史维修记录列表成功"))
                 .andExpect(jsonPath("$.count").value(1))
-                .andExpect(jsonPath("$.data[0].recordId").value(1))
-                .andExpect(jsonPath("$.data[0].name").value("发动机维修记录"))
+                .andExpect(jsonPath("$.data[0].recordId").value(1))                .andExpect(jsonPath("$.data[0].name").value("发动机维修记录"))
                 .andExpect(jsonPath("$.data[0].description").value("更换了机油和机滤"))
                 .andExpect(jsonPath("$.data[0].repairManId").value(1))
-                .andExpect(jsonPath("$.data[0].workHours").value(120))
-                .andExpect(jsonPath("$.data[0].cost").value(500.0));
+                .andExpect(jsonPath("$.data[0].workHours").value(120));
     }
 
     @Test

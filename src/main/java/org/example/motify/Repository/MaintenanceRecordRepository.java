@@ -24,10 +24,6 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
                         "WHERE rm.material_id = :materialId", nativeQuery = true)
         List<MaintenanceRecord> findByMaterialId(@Param("materialId") Long materialId);
 
-        // 根据维修记录费用范围查找
-        @Query("SELECT mr FROM MaintenanceRecord mr WHERE mr.cost BETWEEN :minCost AND :maxCost")
-        List<MaintenanceRecord> findByCostRange(@Param("minCost") Double minCost, @Param("maxCost") Double maxCost);
-
         // 查找特定维修项目的所有维修记录及其使用的材料
         @Query("SELECT mr FROM MaintenanceRecord mr LEFT JOIN FETCH mr.materialAmounts WHERE mr.maintenanceItem.itemId = :itemId")
         List<MaintenanceRecord> findByItemIdWithMaterials(@Param("itemId") Long itemId);

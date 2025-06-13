@@ -300,7 +300,6 @@ public class RepairmanService {
         record.setMaintenanceItem(updatedItem);
         record.setName("开始维修：" + updatedItem.getName());
         record.setDescription("维修人员" + repairman.getName() + "开始处理工单");
-        record.setCost(0.0); // 初始费用为0
         record.setRepairManId(repairmanId);
         record.setWorkHours(0); // 初始工作时间为0
         record.setStartTime(LocalDateTime.now()); // 设置开始时间
@@ -494,7 +493,6 @@ public class RepairmanService {
         record.setMaintenanceItem(updatedItem);
         record.setName("完成维修：" + updatedItem.getName());
         record.setDescription(result);
-        record.setCost(materialCost + laborCost);
         record.setRepairManId(repairmanId);
         // 将小时转换为分钟
         record.setWorkHours(Math.round(workingHours * 60));
