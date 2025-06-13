@@ -211,4 +211,96 @@ public class AdminService {
         log.info("Admin querying all wage records");
         return wageRepository.findAll();
     }
+    
+    // =============== 数据统计查询方法 ===============
+    
+    /**
+     * 统计各车型的维修次数与平均维修费用
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getCarModelRepairStatistics() {
+        log.info("Admin querying car model repair statistics");
+        return adminRepository.getCarModelRepairStatistics();
+    }
+    
+    /**
+     * 统计特定车型最常出现的故障类型
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getCarModelFaultStatistics(String brand, String model) {
+        log.info("Admin querying fault statistics for car model: {} {}", brand, model);
+        return adminRepository.getCarModelFaultStatistics(brand, model);
+    }
+    
+    /**
+     * 按月份统计维修费用构成
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getMonthlyCostAnalysis(String startDate, String endDate) {
+        log.info("Admin querying monthly cost analysis from {} to {}", startDate, endDate);
+        return adminRepository.getMonthlyCostAnalysis(startDate, endDate);
+    }
+    
+    /**
+     * 按季度统计维修费用构成
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getQuarterlyCostAnalysis(String startDate, String endDate) {
+        log.info("Admin querying quarterly cost analysis from {} to {}", startDate, endDate);
+        return adminRepository.getQuarterlyCostAnalysis(startDate, endDate);
+    }
+    
+    /**
+     * 筛选负面反馈工单及涉及的员工
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getNegativeFeedbackOrders(Integer maxScore) {
+        log.info("Admin querying negative feedback orders with max score: {}", maxScore);
+        return adminRepository.getNegativeFeedbackOrders(maxScore);
+    }
+    
+    /**
+     * 统计不同工种在一段时间内接受和完成的任务数量及占比
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getRepairmanTypeTaskStatistics(String startDate, String endDate) {
+        log.info("Admin querying repairman type task statistics from {} to {}", startDate, endDate);
+        return adminRepository.getRepairmanTypeTaskStatistics(startDate, endDate);
+    }
+    
+    /**
+     * 统计未完成的维修任务概览
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getUncompletedTasksOverview() {
+        log.info("Admin querying uncompleted tasks overview");
+        return adminRepository.getUncompletedTasksOverview();
+    }
+    
+    /**
+     * 按工种统计未完成任务
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getUncompletedTasksByRepairmanType() {
+        log.info("Admin querying uncompleted tasks by repairman type");
+        return adminRepository.getUncompletedTasksByRepairmanType();
+    }
+    
+    /**
+     * 按维修人员统计未完成任务
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getUncompletedTasksByRepairman() {
+        log.info("Admin querying uncompleted tasks by repairman");
+        return adminRepository.getUncompletedTasksByRepairman();
+    }
+    
+    /**
+     * 按车辆统计未完成任务
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getUncompletedTasksByCar() {
+        log.info("Admin querying uncompleted tasks by car");
+        return adminRepository.getUncompletedTasksByCar();
+    }
 }

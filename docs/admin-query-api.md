@@ -2,11 +2,13 @@
 
 ## 概述
 
-管理员查询功能允许系统管理员查询所有用户、维修人员、车辆和维修工单的信息，用于系统监控和数据分析。
+管理员查询功能允许系统管理员查询所有用户、维修人员、车辆和维修工单的信息，以及进行高级数据统计分析，用于系统监控和数据分析。
 
 ## API接口
 
-### 1. 获取管理员信息
+### 基本查询接口
+
+#### 1. 获取管理员信息
 
 **接口地址**: `GET /api/admin/{adminId}`
 
@@ -28,7 +30,7 @@
 }
 ```
 
-### 2. 获取所有用户列表
+#### 2. 获取所有用户列表
 
 **接口地址**: `GET /api/admin/users`
 
@@ -92,7 +94,7 @@
 
 **注意**: 响应中不包含用户密码字段，保护用户隐私。
 
-### 3. 获取所有维修人员列表
+#### 3. 获取所有维修人员列表
 
 **接口地址**: `GET /api/admin/repairmen`
 
@@ -162,7 +164,7 @@
 - `INSPECTOR`: 检查员（质量检查、验收）
 - `DIAGNOSER`: 诊断师（故障诊断、技术分析）
 
-### 4. 获取所有车辆列表
+#### 4. 获取所有车辆列表
 
 **接口地址**: `GET /api/admin/cars`
 
@@ -203,7 +205,7 @@
 }
 ```
 
-### 5. 获取所有维修工单列表
+#### 5. 获取所有维修工单列表
 
 **接口地址**: `GET /api/admin/maintenance-items`
 
@@ -487,7 +489,7 @@
 - `COMPLETED`: 已完成
 - `CANCELLED`: 已取消
 
-### 6. 获取所有历史维修记录
+#### 6. 获取所有历史维修记录
 
 **接口地址**: `GET /api/admin/maintenance-records`
 
@@ -540,7 +542,7 @@
 }
 ```
 
-### 7. 获取所有工时费发放记录
+#### 7. 获取所有工时费发放记录
 
 **接口地址**: `GET /api/admin/wages`
 
@@ -672,12 +674,465 @@
 }
 ```
 
-**工时费记录说明**:
-- `totalWorkHours`: 该月总工作时长（小时）
-- `totalIncome`: 该月总收入
-- `settlementDate`: 工资结算日期
-- `repairmanType`: 维修人员类型（MECHANIC、PAINTER、ELECTRICIAN等）
-- `hourlyRate`: 时薪标准
+## 数据统计查询接口
+
+### 1. 统计各车型的维修次数与平均维修费用
+
+**接口地址**: `GET /api/admin/statistics/car-model-repairs`
+
+**功能**: 统计各车型的维修次数、平均维修费用和总费用
+
+**响应示例**:
+```json
+{
+    "message": "获取车型维修统计成功",
+    "count": 3,
+    "data": [
+        {
+            "model": "雅阁",
+            "repairCount": 2,
+            "avgCost": 464.0,
+            "brand": "本田",
+            "totalCost": 928.0
+        },
+        {
+            "model": "A4L",
+            "repairCount": 1,
+            "avgCost": 540.0,
+            "brand": "奥迪",
+            "totalCost": 540.0
+        },
+        {
+            "model": "汉兰达",
+            "repairCount": 1,
+            "avgCost": 135.0,
+            "brand": "丰田",
+            "totalCost": 135.0
+        }
+    ],
+    "success": true
+}
+```
+
+**字段说明**:
+- `brand`: 车辆品牌
+- `model`: 车辆型号
+- `repairCount`: 维修次数
+- `avgCost`: 平均维修费用
+- `totalCost`: 总维修费用
+
+### 2. 统计特定车型最常出现的故障类型
+
+**接口地址**: `GET /api/admin/statistics/car-model-faults?brand={}&model={}`
+
+**请求参数**:
+- `brand` (必填): 车辆品牌
+- `model` (必填): 车辆型号
+
+**注意**: 这两个参数都是必填的，必须作为查询参数提供
+
+**功能**: 统计特定车型最常出现的故障类型及其维修成本
+
+请求示例：`get http://localhost:8080/api/admin/statistics/car-model-faults?brand=本田&model=雅阁`
+**响应示例**:
+```json
+{
+    "brand": "本田",
+    "data": [
+        {
+            "faultType": "发动机保养",
+            "occurrenceCount": 1,
+            "avgRepairCost": 628.0
+        },
+        {
+            "faultType": "刹车系统维修",
+            "occurrenceCount": 1,
+            "avgRepairCost": 300.0
+        }
+    ],
+    "model": "雅阁",
+    "count": 2,
+    "message": "获取车型故障统计成功",
+    "success": true
+}
+```
+
+**字段说明**:
+- `faultType`: 故障类型（维修项目名称）
+- `occurrenceCount`: 出现次数
+- `avgRepairCost`: 平均维修成本
+
+### 3. 按月份统计维修费用构成
+
+**接口地址**: `GET /api/admin/statistics/monthly-cost-analysis`
+
+**请求参数**:
+- `startDate` (必填): 开始日期 (格式: YYYY-MM-DD)
+- `endDate` (必填): 结束日期 (格式: YYYY-MM-DD)
+
+**功能**: 按月份统计维修费用构成，基于维修记录表准确计算材料费和工时费
+
+**注意**: 
+- 总费用(totalCost)基于实际计算的材料费和工时费之和
+- 材料费通过record_material表和materials表计算得出
+- 工时费通过维修记录的工作时长和维修人员时薪计算得出
+- 不再依赖maintenance_records.cost字段，确保数据准确性
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取月度费用分析成功",
+    "count": 3,
+    "data": [
+        {
+            "year": 2024,
+            "month": 6,
+            "totalRecords": 15,
+            "totalCost": 12850.0,
+            "totalMaterialCost": 8965.0,
+            "totalLaborCost": 3885.0,
+            "materialCostPercentage": 69.76,
+            "laborCostPercentage": 30.24
+        },
+        {
+            "year": 2024,
+            "month": 5,
+            "totalRecords": 12,
+            "totalCost": 9680.0,
+            "totalMaterialCost": 6784.0,
+            "totalLaborCost": 2896.0,
+            "materialCostPercentage": 70.08,
+            "laborCostPercentage": 29.92
+        }
+    ]
+}
+```
+
+**字段说明**:
+- `year`: 年份
+- `month`: 月份
+- `totalRecords`: 总维修记录数
+- `totalCost`: 总费用
+- `totalMaterialCost`: 总材料费
+- `totalLaborCost`: 总工时费
+- `materialCostPercentage`: 材料费比例
+- `laborCostPercentage`: 工时费比例
+
+### 4. 按季度统计维修费用构成
+
+**接口地址**: `GET /api/admin/statistics/quarterly-cost-analysis`
+
+**请求参数**:
+- `startDate` (必填): 开始日期 (格式: YYYY-MM-DD)
+- `endDate` (必填): 结束日期 (格式: YYYY-MM-DD)
+
+**功能**: 按季度统计维修费用构成，基于维修记录表准确计算材料费和工时费
+
+**注意**: 与月度分析相同，总费用基于实际计算的材料费和工时费之和
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取季度费用分析成功",
+    "count": 2,
+    "data": [
+        {
+            "year": 2024,
+            "quarter": 2,
+            "totalRecords": 27,
+            "totalCost": 22530.0,
+            "totalMaterialCost": 15749.0,
+            "totalLaborCost": 6781.0,
+            "materialCostPercentage": 69.92,
+            "laborCostPercentage": 30.08
+        },
+        {
+            "year": 2024,
+            "quarter": 1,
+            "totalRecords": 18,
+            "totalCost": 14240.0,
+            "totalMaterialCost": 9968.0,
+            "totalLaborCost": 4272.0,
+            "materialCostPercentage": 70.00,
+            "laborCostPercentage": 30.00
+        }
+    ]
+}
+```
+
+**字段说明**:
+- `year`: 年份
+- `quarter`: 季度 (1-4)
+- `totalRecords`: 总维修记录数
+- 其他字段与月度分析相同
+
+### 5. 筛选负面反馈工单及涉及的员工
+
+**接口地址**: `GET /api/admin/statistics/negative-feedback`
+
+**请求参数**:
+- `maxScore` (可选): 最大评分，默认为2
+
+**功能**: 筛选评分较低的工单及相关维修人员信息
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取负面反馈工单统计成功",
+    "count": 2,
+    "maxScore": 2,
+    "data": [
+        {
+            "itemId": 15,
+            "itemName": "刹车系统维修",
+            "score": 1,
+            "result": "维修不彻底，问题仍存在",
+            "carBrand": "奥迪",
+            "carModel": "A4L",
+            "licensePlate": "深D24680",
+            "repairmanId": 3,
+            "repairmanName": "王师傅",
+            "repairmanType": "BODYWORKER"
+        },
+        {
+            "itemId": 18,
+            "itemName": "空调维修",
+            "score": 2,
+            "result": "维修后制冷效果一般",
+            "carBrand": "本田",
+            "carModel": "雅阁",
+            "licensePlate": "沪B67890",
+            "repairmanId": 2,
+            "repairmanName": "李师傅",
+            "repairmanType": "ELECTRICIAN"
+        }
+    ]
+}
+```
+
+**字段说明**:
+- `itemId`: 工单ID
+- `itemName`: 维修项目名称
+- `score`: 用户评分
+- `result`: 维修结果
+- `carBrand`: 车辆品牌
+- `carModel`: 车辆型号
+- `licensePlate`: 车牌号
+- `repairmanId`: 维修人员ID
+- `repairmanName`: 维修人员姓名
+- `repairmanType`: 维修人员类型
+
+### 6. 统计不同工种任务数量及完成率
+
+**接口地址**: `GET /api/admin/statistics/repairman-type-tasks`
+
+**请求参数**:
+- `startDate` (必填): 开始日期 (格式: YYYY-MM-DD)
+- `endDate` (必填): 结束日期 (格式: YYYY-MM-DD)
+
+**功能**: 统计不同工种在指定时间段内接受和完成的任务数量及占比
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取工种任务统计成功",
+    "count": 4,
+    "data": [
+        {
+            "repairmanType": "MECHANIC",
+            "acceptedTasks": 25,
+            "completedTasks": 23,
+            "acceptedPercentage": 35.21,
+            "completedPercentage": 38.33
+        },
+        {
+            "repairmanType": "ELECTRICIAN",
+            "acceptedTasks": 18,
+            "completedTasks": 16,
+            "acceptedPercentage": 25.35,
+            "completedPercentage": 26.67
+        },
+        {
+            "repairmanType": "BODYWORKER",
+            "acceptedTasks": 15,
+            "completedTasks": 12,
+            "acceptedPercentage": 21.13,
+            "completedPercentage": 20.00
+        },
+        {
+            "repairmanType": "PAINTER",
+            "acceptedTasks": 13,
+            "completedTasks": 9,
+            "acceptedPercentage": 18.31,
+            "completedPercentage": 15.00
+        }
+    ]
+}
+```
+
+**字段说明**:
+- `repairmanType`: 维修人员类型
+- `acceptedTasks`: 接受的任务数量
+- `completedTasks`: 完成的任务数量
+- `acceptedPercentage`: 接受任务占所有接受任务的百分比
+- `completedPercentage`: 完成任务占所有完成任务的百分比
+
+### 7. 统计未完成任务概览
+
+**接口地址**: `GET /api/admin/statistics/uncompleted-tasks-overview`
+
+**功能**: 按状态统计未完成任务的数量和平均等待天数
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取未完成任务概览成功",
+    "count": 2,
+    "data": [
+        {
+            "status": "IN_PROGRESS",
+            "taskCount": 8,
+            "avgDaysPending": 5
+        },
+        {
+            "status": "PENDING",
+            "taskCount": 3,
+            "avgDaysPending": 12
+        }
+    ]
+}
+```
+
+**字段说明**:
+- `status`: 任务状态 (PENDING: 待接受, IN_PROGRESS: 进行中)
+- `taskCount`: 任务数量
+- `avgDaysPending`: 平均等待天数
+
+### 8. 按工种统计未完成任务
+
+**接口地址**: `GET /api/admin/statistics/uncompleted-tasks-by-type`
+
+**功能**: 按维修人员工种统计未完成任务数量
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取工种未完成任务统计成功",
+    "count": 3,
+    "data": [
+        {
+            "repairmanType": "MECHANIC",
+            "uncompletedTasks": 5,
+            "avgDaysPending": 7
+        },
+        {
+            "repairmanType": "ELECTRICIAN",
+            "uncompletedTasks": 3,
+            "avgDaysPending": 4
+        },
+        {
+            "repairmanType": "BODYWORKER",
+            "uncompletedTasks": 3,
+            "avgDaysPending": 9
+        }
+    ]
+}
+```
+
+### 9. 按维修人员统计未完成任务
+
+**接口地址**: `GET /api/admin/statistics/uncompleted-tasks-by-repairman`
+
+**功能**: 按个人统计维修人员的未完成任务数量
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取维修人员未完成任务统计成功",
+    "count": 5,
+    "data": [
+        {
+            "repairmanId": 1,
+            "repairmanName": "张师傅",
+            "repairmanType": "MECHANIC",
+            "uncompletedTasks": 3,
+            "avgDaysPending": 6
+        },
+        {
+            "repairmanId": 2,
+            "repairmanName": "李师傅",
+            "repairmanType": "ELECTRICIAN",
+            "uncompletedTasks": 2,
+            "avgDaysPending": 4
+        },
+        {
+            "repairmanId": 3,
+            "repairmanName": "王师傅",
+            "repairmanType": "BODYWORKER",
+            "uncompletedTasks": 3,
+            "avgDaysPending": 9
+        }
+    ]
+}
+```
+
+### 10. 按车辆统计未完成任务
+
+**接口地址**: `GET /api/admin/statistics/uncompleted-tasks-by-car`
+
+**功能**: 按车辆统计未完成的维修任务数量
+
+**响应示例**:
+```json
+{
+    "success": true,
+    "message": "获取车辆未完成任务统计成功",
+    "count": 4,
+    "data": [
+        {
+            "carId": 6,
+            "brand": "奔驰",
+            "model": "C级",
+            "licensePlate": "川F86420",
+            "uncompletedTasks": 2,
+            "avgDaysPending": 8
+        },
+        {
+            "carId": 3,
+            "brand": "大众",
+            "model": "帕萨特",
+            "licensePlate": "粤C13579",
+            "uncompletedTasks": 1,
+            "avgDaysPending": 5
+        }
+    ]
+}
+```
+
+## 统计API使用说明
+
+### 权限要求
+所有统计API都需要管理员权限访问。
+
+### 日期格式
+所有日期参数使用标准格式: `YYYY-MM-DD`，例如: `2024-01-01`
+
+### 数据来源
+- 所有统计基于已完成的维修工单（status = 'COMPLETED'）
+- 未完成任务统计基于状态为 'PENDING' 或 'IN_PROGRESS' 的工单
+- 负面反馈基于用户评分不为空且评分较低的工单
+
+### 性能考虑
+- 统计查询使用原生SQL实现，性能较好
+- 建议在数据量大时适当限制查询时间范围
+- 复杂统计查询可能需要较长执行时间
 
 ## 错误响应
 
@@ -702,15 +1157,55 @@
 
 ## 使用示例
 
-### 使用curl获取用户列表
+### 基本查询示例
+
+#### 获取用户列表
 ```bash
 curl -X GET "http://localhost:8080/api/admin/users" \
      -H "Content-Type: application/json"
 ```
 
-### 使用curl获取维修工单列表
+#### 获取维修工单列表
 ```bash
 curl -X GET "http://localhost:8080/api/admin/maintenance-items" \
+     -H "Content-Type: application/json"
+```
+
+### 统计查询示例
+
+#### 获取车型维修统计
+```bash
+curl -X GET "http://localhost:8080/api/admin/statistics/car-model-repairs" \
+     -H "Content-Type: application/json"
+```
+
+#### 获取特定车型故障统计
+```bash
+curl -X GET "http://localhost:8080/api/admin/statistics/car-model-faults?brand=丰田&model=凯美瑞" \
+     -H "Content-Type: application/json"
+```
+
+#### 获取月度费用分析
+```bash
+curl -X GET "http://localhost:8080/api/admin/statistics/monthly-cost-analysis?startDate=2024-01-01&endDate=2024-12-31" \
+     -H "Content-Type: application/json"
+```
+
+#### 获取负面反馈工单
+```bash
+curl -X GET "http://localhost:8080/api/admin/statistics/negative-feedback?maxScore=2" \
+     -H "Content-Type: application/json"
+```
+
+#### 获取工种任务统计
+```bash
+curl -X GET "http://localhost:8080/api/admin/statistics/repairman-type-tasks?startDate=2024-01-01&endDate=2024-12-31" \
+     -H "Content-Type: application/json"
+```
+
+#### 获取未完成任务概览
+```bash
+curl -X GET "http://localhost:8080/api/admin/statistics/uncompleted-tasks-overview" \
      -H "Content-Type: application/json"
 ```
 
@@ -725,6 +1220,9 @@ curl -X GET "http://localhost:8080/api/admin/maintenance-items" \
 
 未来可以考虑添加的功能：
 1. 数据导出（CSV、Excel格式）
-2. 统计分析接口
+2. 更多维度的统计分析接口
 3. 实时数据推送
 4. 数据备份和恢复
+5. 统计数据缓存机制
+6. 自定义统计报表
+7. 统计数据可视化图表
