@@ -43,9 +43,8 @@ public class Repairman {
     @JoinColumn(name = "type", referencedColumnName = "type", insertable = false, updatable = false)
     private Salary salary;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "item_repairman", joinColumns = @JoinColumn(name = "repairman_id"), inverseJoinColumns = @JoinColumn(name = "item_id"))
-    @JsonIgnore
     private List<MaintenanceItem> maintenanceItems; // 维修项目
 
     // 获取时薪

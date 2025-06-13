@@ -1,5 +1,7 @@
 package org.example.motify.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
@@ -71,10 +73,11 @@ public class MaintenanceItem {
     private Map<Repairman, Boolean> repairmenAcceptance;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<MaintenanceRecord> maintenanceRecords;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @com.fasterxml.jackson.annotation.JsonManagedReference
+    @JsonManagedReference
     private List<RequiredRepairmanType> requiredTypes = new ArrayList<>();
 
     /**
