@@ -1,6 +1,7 @@
 package org.example.motify.Controller;
 
 import org.example.motify.Entity.*;
+import org.example.motify.Enum.MaintenanceStatus;
 import org.example.motify.Enum.RepairmanType;
 import org.example.motify.Service.RepairmanService;
 import org.example.motify.Exception.*;
@@ -95,6 +96,14 @@ public class RepairmanController {
         return ExceptionLogger.createSuccessResponse(records);
     }
 
+    // 获取已拒绝的维修工单
+    @PostMapping("/rejected-items")
+    public ResponseEntity<?> getRejectedItems(@RequestBody Map<String, Long> payload) {
+        Long repairmanId = payload.get("repairmanId");
+        List<MaintenanceItem> items = repairmanService.getRepairmanRejectedItems(repairmanId);
+        return ExceptionLogger.createSuccessResponse(items);
+    }
+
     // 查询收入统计
     @GetMapping("/{repairmanId}/income")
     public ResponseEntity<?> getIncomeStatistics(
@@ -174,7 +183,7 @@ public class RepairmanController {
      *   "repairmanId": 1,
      *   "workHours": 1,
      *   "startTime": "2024-06-02T10:00:00",
-     *   "name": "�����胎记录", // 可选
+     *   "name": "补胎记录", // 可选
      *   "materials": [
      *     {"materialId": 9, "amount": 1},
      *     {"materialId": 10, "amount": 1}

@@ -278,7 +278,7 @@ public class UserService {
             throw new ResourceNotFoundException("User", "id", userId);
         }
 
-        // 使用原生SQL查询，避免懒加载�������题
+        // 使用原生SQL查询，避免懒加载问题
         List<Object[]> results = carRepository.findCarBasicInfoByUserId(userId);
 
         return results.stream().map(row -> {
@@ -323,7 +323,7 @@ public class UserService {
             throw new BadRequestException("车牌号不能为空");
         }
 
-        // 检查车牌号是否已存��
+        // 检查车牌号是否已存在
         List<Car> existingCars = carRepository.findByLicensePlate(car.getLicensePlate().trim());
         if (!existingCars.isEmpty()) {
             throw new BadRequestException("车牌号 '" + car.getLicensePlate() + "' 已存在，请检查输入");
@@ -389,21 +389,14 @@ public class UserService {
         MaintenanceItem maintenanceItem = new MaintenanceItem();
         maintenanceItem.setName(name.trim());
         maintenanceItem.setDescription(description.trim());
-        maintenanceItem.setStatus(MaintenanceStatus.PENDING);
+        maintenanceItem.setStatus(MaintenanceStatus.AWAITING_ASSIGNMENT);
         maintenanceItem.setProgress(0);
         maintenanceItem.setCost(0.0);
         maintenanceItem.setMaterialCost(0.0);
         maintenanceItem.setLaborCost(0.0);
         maintenanceItem.setCreateTime(LocalDateTime.now());
         maintenanceItem.setCar(car);
-
-        // 自动分配维修人员（简单策略：分配第一个可用的维修人员）
-        List<Repairman> availableRepairmen = repairmanRepository.findAll();
-        if (!availableRepairmen.isEmpty()) {
-            // 为简化实现，这里只分配第一个维修人员
-            // 在实际应用中，可以根���维���类���、负载均衡等因素来选择
-            maintenanceItem.setRepairmen(List.of(availableRepairmen.get(0)));
-        }
+        maintenanceItem.setRepairmenAcceptance(new HashMap<>()); // 初始化维修工接受状态
 
         // 保存维修项目
         return maintenanceItemRepository.save(maintenanceItem);
@@ -495,7 +488,7 @@ public class UserService {
     public MaintenanceItem submitServiceRating(Long userId, Long itemId, Integer score) {
         // 验证参数
         if (score == null || score < 1 || score > 5) {
-            throw new BadRequestException("评分必��在1-5分之间");
+            throw new BadRequestException("评分必须在1-5分之间");
         }
 
         // 验证用户是否存在
@@ -649,6 +642,7 @@ public class UserService {
 
     /**
      * 获取用户撤销/重做能力
+     * 
      * @param userId 用户ID
      * @return Map 包含 canUndo 和 canRedo 字段
      */
@@ -658,7 +652,8 @@ public class UserService {
         boolean canRedo = false;
         if (!histories.isEmpty()) {
             UserHistory current = histories.get(0);
-            UserHistory next = userHistoryRepository.findTop1ByUserIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(userId, current.getOperationTime());
+            UserHistory next = userHistoryRepository.findTop1ByUserIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(
+                    userId, current.getOperationTime());
             canRedo = next != null;
         }
         Map<String, Boolean> result = new HashMap<>();
