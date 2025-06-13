@@ -12,7 +12,7 @@ public class Wage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "repairman_id", nullable = false)
     private Repairman repairman;
 

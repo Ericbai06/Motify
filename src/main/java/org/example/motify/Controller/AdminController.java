@@ -199,6 +199,20 @@ public class AdminController {
     public ResponseEntity<?> getAllMaintenanceItems() {
         try {
             List<MaintenanceItem> maintenanceItems = adminService.getAllMaintenanceItems();
+            
+            // 清除维修人员密码字段以保护隐私
+            maintenanceItems.forEach(item -> {
+                if (item.getRepairmen() != null) {
+                    item.getRepairmen().forEach(repairman -> repairman.setPassword(null));
+                }
+                if (item.getAcceptedRepairmen() != null) {
+                    item.getAcceptedRepairmen().forEach(repairman -> repairman.setPassword(null));
+                }
+                if (item.getPendingRepairmen() != null) {
+                    item.getPendingRepairmen().forEach(repairman -> repairman.setPassword(null));
+                }
+            });
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "获取维修工单列表成功",

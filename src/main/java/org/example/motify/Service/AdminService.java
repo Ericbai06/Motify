@@ -180,14 +180,14 @@ public class AdminService {
     }
 
     /**
-     * 获取所有维修工单信息
+     * 获取所有维修工单信息，包含关联的维修记录
      * 
-     * @return 所有维修工单列表
+     * @return 所有维修工单列表（包含维修记录）
      */
     @Transactional(readOnly = true)
     public List<MaintenanceItem> getAllMaintenanceItems() {
-        log.info("Admin querying all maintenance items");
-        return maintenanceItemRepository.findAll();
+        log.info("Admin querying all maintenance items with records");
+        return maintenanceItemRepository.findAllWithRecords();
     }
 
     /**

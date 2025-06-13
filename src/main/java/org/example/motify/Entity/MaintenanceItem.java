@@ -5,7 +5,6 @@ import lombok.Data;
 import java.util.List;
 import org.example.motify.Enum.MaintenanceStatus;
 import java.time.LocalDateTime;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -71,8 +70,7 @@ public class MaintenanceItem {
     @Column(name = "is_accepted")
     private Map<Repairman, Boolean> repairmenAcceptance;
 
-    @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL)
-    @JsonIgnore
+    @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<MaintenanceRecord> maintenanceRecords;
 
     @OneToMany(mappedBy = "maintenanceItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
