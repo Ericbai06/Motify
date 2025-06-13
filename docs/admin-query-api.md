@@ -764,7 +764,7 @@
 
 ### 3. 按月份统计维修费用构成
 
-**接口地址**: `GET /api/admin/statistics/monthly-cost-analysis`
+**接口地址**: `GET /api/admin/statistics/monthly-cost-analysis?startDate={}&endDate={}`
 
 **请求参数**:
 - `startDate` (必填): 开始日期 (格式: YYYY-MM-DD)
@@ -831,7 +831,7 @@
 
 ### 4. 按季度统计维修费用构成
 
-**接口地址**: `GET /api/admin/statistics/quarterly-cost-analysis`
+**接口地址**: `GET /api/admin/statistics/quarterly-cost-analysis?startDate={}&endDate={}`
 
 **请求参数**:
 - `startDate` (必填): 开始日期 (格式: YYYY-MM-DD)
@@ -880,7 +880,7 @@
 
 ### 5. 筛选负面反馈工单及涉及的员工
 
-**接口地址**: `GET /api/admin/statistics/negative-feedback`
+**接口地址**: `GET /api/admin/statistics/negative-feedback?maxScore={}`
 
 **请求参数**:
 - `maxScore` (可选): 最大评分，默认为2
@@ -890,36 +890,36 @@
 **响应示例**:
 ```json
 {
+    "maxScore": 4,
     "success": true,
-    "message": "获取负面反馈工单统计成功",
-    "count": 2,
-    "maxScore": 2,
     "data": [
         {
-            "itemId": 15,
-            "itemName": "刹车系统维修",
-            "score": 1,
-            "result": "维修不彻底，问题仍存在",
-            "carBrand": "奥迪",
-            "carModel": "A4L",
-            "licensePlate": "深D24680",
-            "repairmanId": 3,
-            "repairmanName": "王师傅",
-            "repairmanType": "BODYWORKER"
+            "result": "大灯更换完成，照明正常",
+            "repairmanId": 6,
+            "itemId": 7,
+            "score": 4,
+            "repairmanName": "陈师傅",
+            "itemName": "大灯维修",
+            "carBrand": "丰田",
+            "licensePlate": "鄂G13691",
+            "repairmanType": "INSPECTOR",
+            "carModel": "汉兰达"
         },
         {
-            "itemId": 18,
-            "itemName": "空调维修",
-            "score": 2,
-            "result": "维修后制冷效果一般",
+            "result": "刹车片更换完成，制动性能良好",
+            "repairmanId": 3,
+            "itemId": 2,
+            "score": 4,
+            "repairmanName": "王师傅",
+            "itemName": "刹车系统维修",
             "carBrand": "本田",
-            "carModel": "雅阁",
-            "licensePlate": "沪B67890",
-            "repairmanId": 2,
-            "repairmanName": "李师傅",
-            "repairmanType": "ELECTRICIAN"
+            "licensePlate": "云A12345",
+            "repairmanType": "BODYWORKER",
+            "carModel": "雅阁"
         }
-    ]
+    ],
+    "count": 2,
+    "message": "获取负面反馈工单统计成功"
 }
 ```
 
@@ -948,39 +948,53 @@
 **响应示例**:
 ```json
 {
-    "success": true,
-    "message": "获取工种任务统计成功",
-    "count": 4,
     "data": [
         {
-            "repairmanType": "MECHANIC",
-            "acceptedTasks": 25,
-            "completedTasks": 23,
-            "acceptedPercentage": 35.21,
-            "completedPercentage": 38.33
+            "completedPercentage": 25.0,
+            "completedTasks": 1,
+            "acceptedTasks": 3,
+            "acceptedPercentage": 37.5,
+            "repairmanType": "MECHANIC"
         },
         {
-            "repairmanType": "ELECTRICIAN",
-            "acceptedTasks": 18,
-            "completedTasks": 16,
-            "acceptedPercentage": 25.35,
-            "completedPercentage": 26.67
+            "completedPercentage": 25.0,
+            "completedTasks": 1,
+            "acceptedTasks": 2,
+            "acceptedPercentage": 25.0,
+            "repairmanType": "BODYWORKER"
         },
         {
-            "repairmanType": "BODYWORKER",
-            "acceptedTasks": 15,
-            "completedTasks": 12,
-            "acceptedPercentage": 21.13,
-            "completedPercentage": 20.00
+            "completedPercentage": 50.0,
+            "completedTasks": 2,
+            "acceptedTasks": 2,
+            "acceptedPercentage": 25.0,
+            "repairmanType": "ELECTRICIAN"
         },
         {
-            "repairmanType": "PAINTER",
-            "acceptedTasks": 13,
-            "completedTasks": 9,
-            "acceptedPercentage": 18.31,
-            "completedPercentage": 15.00
+            "completedPercentage": 0.0,
+            "completedTasks": 0,
+            "acceptedTasks": 2,
+            "acceptedPercentage": 25.0,
+            "repairmanType": "PAINTER"
+        },
+        {
+            "completedPercentage": 0.0,
+            "completedTasks": 0,
+            "acceptedTasks": 1,
+            "acceptedPercentage": 12.5,
+            "repairmanType": "APPRENTICE"
+        },
+        {
+            "completedPercentage": 25.0,
+            "completedTasks": 1,
+            "acceptedTasks": 1,
+            "acceptedPercentage": 12.5,
+            "repairmanType": "INSPECTOR"
         }
-    ]
+    ],
+    "count": 6,
+    "message": "获取工种任务统计成功",
+    "success": true
 }
 ```
 
@@ -1000,21 +1014,21 @@
 **响应示例**:
 ```json
 {
-    "success": true,
-    "message": "获取未完成任务概览成功",
-    "count": 2,
     "data": [
         {
-            "status": "IN_PROGRESS",
-            "taskCount": 8,
-            "avgDaysPending": 5
+            "taskCount": 4,
+            "avgDaysPending": 99,
+            "status": "PENDING"
         },
         {
-            "status": "PENDING",
-            "taskCount": 3,
-            "avgDaysPending": 12
+            "taskCount": 2,
+            "avgDaysPending": 377,
+            "status": "IN_PROGRESS"
         }
-    ]
+    ],
+    "count": 2,
+    "message": "获取未完成任务概览成功",
+    "success": true
 }
 ```
 
@@ -1032,26 +1046,26 @@
 **响应示例**:
 ```json
 {
-    "success": true,
-    "message": "获取工种未完成任务统计成功",
-    "count": 3,
     "data": [
         {
+            "avgDaysPending": 377,
             "repairmanType": "MECHANIC",
-            "uncompletedTasks": 5,
-            "avgDaysPending": 7
+            "uncompletedTasks": 2
         },
         {
-            "repairmanType": "ELECTRICIAN",
-            "uncompletedTasks": 3,
-            "avgDaysPending": 4
+            "avgDaysPending": 376,
+            "repairmanType": "PAINTER",
+            "uncompletedTasks": 2
         },
         {
-            "repairmanType": "BODYWORKER",
-            "uncompletedTasks": 3,
-            "avgDaysPending": 9
+            "avgDaysPending": 376,
+            "repairmanType": "APPRENTICE",
+            "uncompletedTasks": 1
         }
-    ]
+    ],
+    "count": 3,
+    "message": "获取工种未完成任务统计成功",
+    "success": true
 }
 ```
 
@@ -1064,32 +1078,32 @@
 **响应示例**:
 ```json
 {
-    "success": true,
-    "message": "获取维修人员未完成任务统计成功",
-    "count": 5,
     "data": [
         {
             "repairmanId": 1,
             "repairmanName": "张师傅",
+            "avgDaysPending": 377,
             "repairmanType": "MECHANIC",
-            "uncompletedTasks": 3,
-            "avgDaysPending": 6
+            "uncompletedTasks": 2
         },
         {
-            "repairmanId": 2,
-            "repairmanName": "李师傅",
-            "repairmanType": "ELECTRICIAN",
-            "uncompletedTasks": 2,
-            "avgDaysPending": 4
+            "repairmanId": 4,
+            "repairmanName": "赵师傅",
+            "avgDaysPending": 376,
+            "repairmanType": "PAINTER",
+            "uncompletedTasks": 2
         },
         {
-            "repairmanId": 3,
-            "repairmanName": "王师傅",
-            "repairmanType": "BODYWORKER",
-            "uncompletedTasks": 3,
-            "avgDaysPending": 9
+            "repairmanId": 5,
+            "repairmanName": "刘师傅",
+            "avgDaysPending": 376,
+            "repairmanType": "APPRENTICE",
+            "uncompletedTasks": 1
         }
-    ]
+    ],
+    "count": 3,
+    "message": "获取维修人员未完成任务统计成功",
+    "success": true
 }
 ```
 
@@ -1102,27 +1116,51 @@
 **响应示例**:
 ```json
 {
-    "success": true,
-    "message": "获取车辆未完成任务统计成功",
-    "count": 4,
     "data": [
         {
-            "carId": 6,
-            "brand": "奔驰",
-            "model": "C级",
-            "licensePlate": "川F86420",
-            "uncompletedTasks": 2,
-            "avgDaysPending": 8
+            "licensePlate": "测试车牌",
+            "model": "测试型号",
+            "avgDaysPending": 7,
+            "brand": "测试品牌",
+            "carId": 27,
+            "uncompletedTasks": 2
         },
         {
-            "carId": 3,
-            "brand": "大众",
-            "model": "帕萨特",
             "licensePlate": "粤C13579",
-            "uncompletedTasks": 1,
-            "avgDaysPending": 5
+            "model": "帕萨特",
+            "avgDaysPending": 377,
+            "brand": "大众",
+            "carId": 3,
+            "uncompletedTasks": 1
+        },
+        {
+            "licensePlate": "浙E97531",
+            "model": "3系",
+            "avgDaysPending": 375,
+            "brand": "宝马",
+            "carId": 5,
+            "uncompletedTasks": 1
+        },
+        {
+            "licensePlate": "川F86420",
+            "model": "C级",
+            "avgDaysPending": 376,
+            "brand": "奔驰",
+            "carId": 6,
+            "uncompletedTasks": 1
+        },
+        {
+            "licensePlate": "京A12345",
+            "model": "凯美瑞",
+            "avgDaysPending": 7,
+            "brand": "丰田",
+            "carId": 1,
+            "uncompletedTasks": 1
         }
-    ]
+    ],
+    "count": 5,
+    "message": "获取车辆未完成任务统计成功",
+    "success": true
 }
 ```
 
