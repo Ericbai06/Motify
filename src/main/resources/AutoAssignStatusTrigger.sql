@@ -16,7 +16,7 @@ BEGIN
     WHERE item_id = v_item_id;
     
     -- 只有当工单状态为PENDING或ACCEPTED时才进行检查
-    IF v_current_status IN ('PENDING', 'ACCEPTED') THEN
+    IF v_current_status IN ('PENDING') THEN
         -- 计算该工单所有工种的数量
         SELECT COUNT(*) INTO v_total_types
         FROM required_repairman_types
@@ -30,7 +30,7 @@ BEGIN
         -- 如果所有工种都满足分配要求，更新工单状态为IN_PROGRESS
         IF v_total_types > 0 AND v_total_types = v_fulfilled_types THEN
             UPDATE maintenance_items
-            SET status = 'IN_PROGRESS'
+            SET status = 'ACCEPTED'
             WHERE item_id = v_item_id;
         END IF;
     END IF;

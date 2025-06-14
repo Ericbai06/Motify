@@ -81,30 +81,22 @@ public class WageController {
     // =============== 维修人员工资查询接口 ===============
 
     /**
-     * 获取当前登录维修人员的所有工资记录
-     * 
-     * @return 工资记录列表
+     * 获取当前维修人员的所有工资记录
      */
-    @GetMapping("/my/history")
-    public ResponseEntity<?> getMyWageHistory() {
-        Long repairmanId = getCurrentRepairmanId();
+    @GetMapping("/repairman/{repairmanId}/history")
+    public ResponseEntity<?> getRepairmanWageHistory(@PathVariable Long repairmanId) {
         List<Wage> wages = wageService.getRepairmanWages(repairmanId);
-
         return ResponseEntity.ok(createSuccessResponse(wages));
     }
 
     /**
-     * 获取当前登录维修人员指定月份的工资记录
-     * 
-     * @param year  年份
-     * @param month 月份(1-12)
-     * @return 工资记录
+     * 获取指定月份的工资记录
      */
     @GetMapping("/my/{year}/{month}")
     public ResponseEntity<?> getMyMonthlyWage(
             @PathVariable int year,
-            @PathVariable int month) {
-        Long repairmanId = getCurrentRepairmanId();
+            @PathVariable int month,
+            @RequestParam Long repairmanId) {
 
         List<Wage> wages = wageRepository.findByRepairmanIdAndYearAndMonth(repairmanId, year, month);
         if (wages.isEmpty()) {
@@ -116,20 +108,16 @@ public class WageController {
     }
 
     /**
-     * 获取当前登录维修人员的年度工资统计
-     * 
-     * @param year 年份，默认为当前年份
-     * @return 年度工资统计信息
+     * 获取年度工资统计
      */
     @GetMapping("/my/yearly-stats")
     public ResponseEntity<?> getMyYearlyWageStats(
-            @RequestParam(required = false) Integer year) {
+            @RequestParam(required = false) Integer year,
+            @RequestParam Long repairmanId) {
 
         if (year == null) {
             year = LocalDate.now().getYear();
         }
-
-        Long repairmanId = getCurrentRepairmanId();
 
         // 获取指定年份的所有工资记录
         List<Wage> yearWages = wageRepository.findByRepairmanIdAndYear(repairmanId, year);
@@ -168,14 +156,10 @@ public class WageController {
     }
 
     /**
-     * 获取当前登录维修人员的工资统计摘要
-     * 包括总收入、平均工资等信息
-     * 
-     * @return 工资统计摘要
+     * 获取工资统计摘要
      */
     @GetMapping("/my/summary")
-    public ResponseEntity<?> getMyWageSummary() {
-        Long repairmanId = getCurrentRepairmanId();
+    public ResponseEntity<?> getMyWageSummary(@RequestParam Long repairmanId) {
         List<Wage> allWages = wageService.getRepairmanWages(repairmanId);
 
         if (allWages.isEmpty()) {
@@ -246,19 +230,6 @@ public class WageController {
         summary.put("yearlyTrend", yearlyTrend);
 
         return ResponseEntity.ok(createSuccessResponse(summary));
-    }
-
-    /**
-     * 获取当前登录维修人员的ID
-     */
-    private Long getCurrentRepairmanId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        Repairman repairman = repairmanRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalStateException("当前登录用户不是维修人员"));
-
-        return repairman.getRepairmanId();
     }
 
     /**
