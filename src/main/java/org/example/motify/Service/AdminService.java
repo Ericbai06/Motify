@@ -4,7 +4,10 @@ import org.example.motify.Entity.*;
 import org.example.motify.Repository.*;
 import org.example.motify.Exception.BadRequestException;
 import org.example.motify.Exception.AuthenticationException;
+import org.example.motify.Exception.ResourceNotFoundException;
+import org.example.motify.Enum.MaintenanceStatus;
 import org.example.motify.Enum.MaterialType;
+import org.example.motify.Enum.RepairmanType;
 import org.example.motify.util.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -23,27 +27,33 @@ import java.util.List;
 public class AdminService {
     @Autowired
     private final AdminRepository adminRepository;
-    
+
     @Autowired
     private final UserRepository userRepository;
-    
+
     @Autowired
     private final RepairmanRepository repairmanRepository;
-    
+
     @Autowired
     private final CarRepository carRepository;
-    
+
     @Autowired
     private final MaintenanceItemRepository maintenanceItemRepository;
-    
+
     @Autowired
     private final MaintenanceRecordRepository maintenanceRecordRepository;
-    
+
     @Autowired
     private final WageRepository wageRepository;
 
     @Autowired
     private final MaterialRepository materialRepository;
+
+    @Autowired
+    private final RequiredRepairmanTypeRepository requiredTypeRepository;
+
+    @Autowired
+    private final RepairmanService repairmanService;
 
     public Admin registerAdmin(Admin admin) {
         log.info("Starting admin registration, username: {}", admin.getUsername());
@@ -251,9 +261,9 @@ public class AdminService {
         log.info("Admin querying materials by stock range: {} - {}", minStock, maxStock);
         return materialRepository.findByStockRange(minStock, maxStock);
     }
-    
+
     // =============== 数据统计查询方法 ===============
-    
+
     /**
      * 统计各车型的维修次数与平均维修费用
      */
@@ -262,7 +272,7 @@ public class AdminService {
         log.info("Admin querying car model repair statistics");
         return adminRepository.getCarModelRepairStatistics();
     }
-    
+
     /**
      * 统计特定车型最常出现的故障类型
      */
@@ -271,7 +281,7 @@ public class AdminService {
         log.info("Admin querying fault statistics for car model: {} {}", brand, model);
         return adminRepository.getCarModelFaultStatistics(brand, model);
     }
-    
+
     /**
      * 按月份统计维修费用构成
      */
@@ -280,7 +290,7 @@ public class AdminService {
         log.info("Admin querying monthly cost analysis from {} to {}", startDate, endDate);
         return adminRepository.getMonthlyCostAnalysis(startDate, endDate);
     }
-    
+
     /**
      * 按季度统计维修费用构成
      */
@@ -289,7 +299,7 @@ public class AdminService {
         log.info("Admin querying quarterly cost analysis from {} to {}", startDate, endDate);
         return adminRepository.getQuarterlyCostAnalysis(startDate, endDate);
     }
-    
+
     /**
      * 筛选负面反馈工单及涉及的员工
      */
@@ -298,7 +308,7 @@ public class AdminService {
         log.info("Admin querying negative feedback orders with max score: {}", maxScore);
         return adminRepository.getNegativeFeedbackOrders(maxScore);
     }
-    
+
     /**
      * 统计不同工种在一段时间内接受和完成的任务数量及占比
      */
@@ -307,7 +317,7 @@ public class AdminService {
         log.info("Admin querying repairman type task statistics from {} to {}", startDate, endDate);
         return adminRepository.getRepairmanTypeTaskStatistics(startDate, endDate);
     }
-    
+
     /**
      * 统计未完成的维修任务概览
      */
@@ -316,7 +326,7 @@ public class AdminService {
         log.info("Admin querying uncompleted tasks overview");
         return adminRepository.getUncompletedTasksOverview();
     }
-    
+
     /**
      * 按工种统计未完成任务
      */
@@ -325,7 +335,7 @@ public class AdminService {
         log.info("Admin querying uncompleted tasks by repairman type");
         return adminRepository.getUncompletedTasksByRepairmanType();
     }
-    
+
     /**
      * 按维修人员统计未完成任务
      */
@@ -334,7 +344,7 @@ public class AdminService {
         log.info("Admin querying uncompleted tasks by repairman");
         return adminRepository.getUncompletedTasksByRepairman();
     }
-    
+
     /**
      * 按车辆统计未完成任务
      */
@@ -342,5 +352,73 @@ public class AdminService {
     public List<Object[]> getUncompletedTasksByCar() {
         log.info("Admin querying uncompleted tasks by car");
         return adminRepository.getUncompletedTasksByCar();
+    }
+
+    /**
+     * 根据状态获取维修工单
+     * 
+     * @param status 维修工单状态
+     * @return 指定状态的维修工单列表
+     */
+    @Transactional(readOnly = true)
+    public List<MaintenanceItem> getMaintenanceItemsByStatus(MaintenanceStatus status) {
+        log.info("Admin querying maintenance items by status: {}", status);
+        return maintenanceItemRepository.findByStatus(status);
+    }
+
+    /**
+     * 管理员为维修工单分配维修工种和数量
+     * 
+     * @param itemId           维修工单ID
+     * @param requiredTypesMap 维修工种和数量的映射
+     * @return 更新后的维修工单
+     */
+    @Transactional
+    public MaintenanceItem assignRepairmanTypesToMaintenanceItem(Long itemId,
+            Map<RepairmanType, Integer> requiredTypesMap) {
+        log.info("Admin assigning repairman types to maintenance item: {}", itemId);
+
+        if (requiredTypesMap == null || requiredTypesMap.isEmpty()) {
+            throw new BadRequestException("维修工种和数量不能为空");
+        }
+
+        // 验证维修项目是否存在
+        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+
+        // 验证维修项目状态是否为等待分配
+        if (item.getStatus() != MaintenanceStatus.AWAITING_ASSIGNMENT) {
+            throw new BadRequestException("只有等待分配状态的维修工单才能分配维修工种");
+        }
+
+        // 删除之前的工种需求（如果有）
+        if (item.getRequiredTypes() != null && !item.getRequiredTypes().isEmpty()) {
+            for (RequiredRepairmanType type : new java.util.ArrayList<>(item.getRequiredTypes())) {
+                requiredTypeRepository.delete(type);
+            }
+            item.getRequiredTypes().clear();
+        }
+
+        // 创建工种需求并保存
+        for (Map.Entry<RepairmanType, Integer> entry : requiredTypesMap.entrySet()) {
+            RequiredRepairmanType requiredType = new RequiredRepairmanType();
+            requiredType.setMaintenanceItem(item);
+            requiredType.setType(entry.getKey());
+            requiredType.setRequired(entry.getValue());
+            requiredType.setAssigned(0);
+            requiredTypeRepository.save(requiredType);
+        }
+
+        // 更新工单状态为待处理
+        item.setStatus(MaintenanceStatus.PENDING);
+        item.setUpdateTime(LocalDateTime.now());
+
+        // 保存更新后的工单
+        MaintenanceItem updatedItem = maintenanceItemRepository.save(item);
+
+        // 调用RepairmanService中的方法自动分配维修人员
+        repairmanService.autoAssignRepairmen(updatedItem);
+
+        return updatedItem;
     }
 }

@@ -33,3 +33,5 @@ build/
 .vscode/
 .idea/
 .mvn/
+
+src/test/resources/application-test.properties

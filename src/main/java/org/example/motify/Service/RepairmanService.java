@@ -116,7 +116,7 @@ public class RepairmanService {
 
             // 如果仍然没有找到，使用一个固定的默认值
             if (salary == null) {
-                repairman.setHourlyRate(50.0f); // 默��时薪
+                repairman.setHourlyRate(50.0f); // 默认时薪
                 repairman.setType(defaultType);
                 return repairmanRepository.save(repairman);
             }
@@ -225,7 +225,18 @@ public class RepairmanService {
     public List<MaintenanceItem> getRepairmanMaintenanceItems(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        return repairman.getMaintenanceItems();
+
+        // 获取所有工单
+        List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
+
+        // 过滤掉已经被该维修人员拒绝的工单
+        return allItems.stream()
+                .filter(item -> {
+                    // 检查维修人员是否在工单的repairmenAcceptance中
+                    Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
+                    return acceptance != null && acceptance.containsKey(repairman);
+                })
+                .toList();
     }
 
     public MaintenanceItem saveMaintenanceItem(MaintenanceItem record) {
@@ -260,7 +271,17 @@ public class RepairmanService {
     public List<MaintenanceItem> getRepairmanCurrentRecords(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        return repairman.getMaintenanceItems().stream()
+
+        // 获取所有工单
+        List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
+
+        // 过滤掉已经被该维修人员拒绝的工单，并且只返回未完成的工单
+        return allItems.stream()
+                .filter(item -> {
+                    // 检查维修人员是否在工单的repairmenAcceptance中
+                    Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
+                    return acceptance != null && acceptance.containsKey(repairman);
+                })
                 .filter(record -> record.getProgress() < 100)
                 .toList();
     }
@@ -269,9 +290,49 @@ public class RepairmanService {
     public List<MaintenanceItem> getRepairmanCompletedRecords(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-        return repairman.getMaintenanceItems().stream()
+
+        // 获取所有工单
+        List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
+
+        // 过滤掉已经被该维修人员拒绝的工单，并且只返回已完成的工单
+        return allItems.stream()
+                .filter(item -> {
+                    // 检查维修人员是否在工单的repairmenAcceptance中
+                    Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
+                    return acceptance != null && acceptance.containsKey(repairman);
+                })
                 .filter(record -> record.getProgress() == 100)
                 .toList();
+    }
+
+    /**
+     * 获取维修人员已拒绝的维修工单
+     * 
+     * @param repairmanId 维修人员ID
+     * @return 已拒绝的维修工单列表
+     */
+    @Transactional(readOnly = true)
+    public List<MaintenanceItem> getRepairmanRejectedItems(Long repairmanId) {
+        try {
+            Repairman repairman = repairmanRepository.findById(repairmanId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+
+            // 获取所有与该维修人员相关的工单（包括已拒绝的）
+            List<MaintenanceItem> allItems = maintenanceItemRepository.findByRepairmanId(repairmanId);
+
+            // 获取维修人员当前的工单（未拒绝的）
+            List<MaintenanceItem> currentItems = getRepairmanMaintenanceItems(repairmanId);
+
+            // 过滤出已拒绝的工单（在所有工单中但不在当前工单中）
+            return allItems.stream()
+                    .filter(item -> !currentItems.contains(item))
+                    .toList();
+        } catch (Exception e) {
+            // 记录异常并返回空列表，避免服务器内部错误
+            System.err.println("获取已拒绝工单时发生错误: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
     public MaintenanceItem acceptMaintenanceItem(Long repairmanId, Long itemId) {
@@ -298,6 +359,16 @@ public class RepairmanService {
         item.setStatus(MaintenanceStatus.ACCEPTED);
         item.setProgress(0);
         item.setUpdateTime(java.time.LocalDateTime.now());
+
+        // 更新对应工种的已分配数量
+        RepairmanType type = repairman.getType();
+        for (RequiredRepairmanType requirement : item.getRequiredTypes()) {
+            if (requirement.getType() == type) {
+                requirement.setAssigned(requirement.getAssigned() + 1);
+                requiredTypeRepository.save(requirement);
+                break;
+            }
+        }
 
         // 保存更新后的工单
         MaintenanceItem updatedItem = maintenanceItemRepository.save(item);
@@ -354,13 +425,18 @@ public class RepairmanService {
         // 找出此维修人员的工种
         RepairmanType type = repairman.getType();
 
-        // 更新对��工种的已分配数量
+        // 更新对该工种的已分配数量
         for (RequiredRepairmanType requirement : item.getRequiredTypes()) {
             if (requirement.getType() == type) {
                 requirement.setAssigned(requirement.getAssigned() - 1);
                 requiredTypeRepository.save(requirement);
                 break;
             }
+        }
+
+        // 确保工单状态为PENDING，因为它需要重新分配
+        if (item.getStatus() != MaintenanceStatus.AWAITING_ASSIGNMENT) {
+            item.setStatus(MaintenanceStatus.AWAITING_ASSIGNMENT);
         }
 
         // 保存工单状态
@@ -653,7 +729,7 @@ public class RepairmanService {
         return savedItem;
     }
 
-    private void autoAssignRepairmen(MaintenanceItem item) {
+    public void autoAssignRepairmen(MaintenanceItem item) {
         // 先保存并刷新确保能获取到完整关联数据
         MaintenanceItem savedItem = maintenanceItemRepository.saveAndFlush(item);
 
@@ -661,18 +737,18 @@ public class RepairmanService {
         MaintenanceItem refreshedItem = maintenanceItemRepository.findById(savedItem.getItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", savedItem.getItemId()));
 
-        // 从数据���加载这个工单的所有工种需求
+        // 从数据库加载这个工单的所有工种需求
         List<RequiredRepairmanType> requirements = requiredTypeRepository
                 .findByMaintenanceItem_ItemId(refreshedItem.getItemId());
 
         for (RequiredRepairmanType requirement : requirements) {
             RepairmanType type = requirement.getType();
-            int needed = requirement.getRequired() - requirement.getAssigned();
+            int needed = requirement.getRequired();
 
             if (needed <= 0)
                 continue;
 
-            // 查询该工种维修人员并���������当前工作量排序
+            // 查询该工种维修人员并按当前工作量排序
             List<Repairman> availableRepairmen = repairmanRepository.findByTypeOrderByWorkloadAsc(type);
 
             // 分配需要的数量
@@ -686,9 +762,7 @@ public class RepairmanService {
                 assigned++;
             }
 
-            // 更新已分配数量
-            requirement.setAssigned(requirement.getAssigned() + assigned);
-            requiredTypeRepository.save(requirement);
+            // 不在这里更新已分配数量，而是在维修人员接受工单时更新
         }
 
         // 如果有变更，保存维修工单
@@ -770,21 +844,39 @@ public class RepairmanService {
 
     /**
      * 获取维修人员历史撤销/重做能力
+     * 
      * @param repairmanId 维修人员ID
      * @return Map 包含 canUndo 和 canRedo 字段
      */
     public Map<String, Boolean> getUndoRedoStatus(Long repairmanId) {
-        List<RepairmanHistory> histories = repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId);
+        List<RepairmanHistory> histories = repairmanHistoryRepository
+                .findByRepairmanIdOrderByOperationTimeDesc(repairmanId);
         boolean canUndo = histories.size() > 1;
         boolean canRedo = false;
         if (!histories.isEmpty()) {
             RepairmanHistory current = histories.get(0);
-            RepairmanHistory next = repairmanHistoryRepository.findTop1ByRepairmanIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(repairmanId, current.getOperationTime());
+            RepairmanHistory next = repairmanHistoryRepository
+                    .findTop1ByRepairmanIdAndOperationTimeGreaterThanOrderByOperationTimeAsc(repairmanId,
+                            current.getOperationTime());
             canRedo = next != null;
         }
         Map<String, Boolean> result = new java.util.HashMap<>();
         result.put("canUndo", canUndo);
         result.put("canRedo", canRedo);
         return result;
+    }
+
+    /**
+     * 为指定维修工单分配维修人员
+     * 该方法允许其他服务调用，用于自动分配维修人员
+     * 
+     * @param item 需要分配维修人员的工单
+     * @return 更新后的维修工单
+     */
+    @Transactional
+    public MaintenanceItem assignRepairmenToItem(MaintenanceItem item) {
+        // 调用私有方法完成实际分配
+        autoAssignRepairmen(item);
+        return item;
     }
 }
