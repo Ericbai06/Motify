@@ -110,7 +110,8 @@ public class AutoAssignmentIntegrationTest {
                 item.setCreateTime(java.time.LocalDateTime.now());
 
                 // 设置维修人员
-                item.addRepairman(repairman, true);
+                // item.addRepairman(repairman, true);
+                maintenanceItemRepository.acceptRepairman(item.getItemId(), repairman.getRepairmanId());
                 maintenanceItemRepository.save(item);
             }
         }
