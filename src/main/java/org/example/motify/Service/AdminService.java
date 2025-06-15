@@ -421,4 +421,28 @@ public class AdminService {
 
         return updatedItem;
     }
+
+    /**
+     * 删除维修工单
+     * 注意：需要先执行 update_foreign_keys_to_cascade.sql 脚本来设置数据库外键为CASCADE
+     * @param itemId 工单ID
+     */
+    public void deleteMaintenanceItem(Long itemId) {
+        // 先检查工单是否存在
+        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        
+        // 记录日志
+        log.info("正在删除维修工单: itemId={}, name={}", itemId, item.getName());
+        
+        try {
+            // 直接删除主工单，相关子表记录会通过CASCADE自动删除
+            adminRepository.deleteMaintenanceItem(itemId);
+            
+            log.info("维修工单删除成功: itemId={}", itemId);
+        } catch (Exception e) {
+            log.error("删除维修工单失败: itemId={}, error={}", itemId, e.getMessage());
+            throw new RuntimeException("删除维修工单失败: " + e.getMessage(), e);
+        }
+    }
 }

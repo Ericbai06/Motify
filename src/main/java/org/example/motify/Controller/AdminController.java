@@ -717,4 +717,29 @@ public class AdminController {
                     "message", "维修工种分配失败：" + e.getMessage()));
         }
     }
+
+    /**
+     * 删除维修工单
+     * @param itemId 工单ID
+     * @return 删除结果
+     */
+    @DeleteMapping("/maintenance-items/{itemId}")
+    public ResponseEntity<?> deleteMaintenanceItem(@PathVariable Long itemId) {
+        try {
+            adminService.deleteMaintenanceItem(itemId);
+            
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "维修工单删除成功",
+                    "itemId", itemId));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "success", false,
+                    "message", "删除维修工单失败：" + e.getMessage()));
+        }
+    }
 }

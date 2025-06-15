@@ -286,4 +286,50 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
         ORDER BY uncompleted_tasks DESC
         """, nativeQuery = true)
     List<Object[]> getUncompletedTasksByCar();
+
+    /**
+     * 删除维修工单 - 按照外键依赖顺序删除相关数据
+     * 1. 删除材料使用记录
+     * 2. 删除维修记录
+     * 3. 删除工单维修工关联
+     * 4. 删除主工单
+     */
+    @Modifying
+    @Transactional
+    @Query(value = """
+        DELETE rm FROM record_material rm 
+        INNER JOIN maintenance_records mr ON rm.record_id = mr.record_id 
+        WHERE mr.item_id = :itemId
+        """, nativeQuery = true)
+    void deleteRecordMaterialByItemId(@Param("itemId") Long itemId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM maintenance_records WHERE item_id = :itemId", nativeQuery = true)
+    void deleteMaintenanceRecordsByItemId(@Param("itemId") Long itemId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM item_repairman WHERE item_id = :itemId", nativeQuery = true)
+    void deleteItemRepairmanByItemId(@Param("itemId") Long itemId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM maintenance_items WHERE item_id = :itemId", nativeQuery = true)
+    void deleteMaintenanceItemById(@Param("itemId") Long itemId);
+
+    /**
+     * 检查工单是否存在
+     */
+    @Query(value = "SELECT COUNT(*) > 0 FROM maintenance_items WHERE item_id = :itemId", nativeQuery = true)
+    boolean existsMaintenanceItemById(@Param("itemId") Long itemId);
+
+    /**
+     * 删除维修工单 - 利用数据库级联删除功能，只需删除主工单
+     * 相关的维修记录、材料使用记录、工单维修工关联等会自动删除
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM maintenance_items WHERE item_id = :itemId", nativeQuery = true)
+    void deleteMaintenanceItem(@Param("itemId") Long itemId);
 }

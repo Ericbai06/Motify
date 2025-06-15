@@ -966,6 +966,330 @@
 }
 ```
 
+##### 12. 批量提交维修工单
+**接口地址**：POST http://localhost:8080/api/repair/batch-submit
+
+**请求示例**
+```
+[
+  {
+    "userId": 1,
+    "carId": 1,
+    "name": "发动机维修",
+    "description": "发动机异响，需要检查和维修",
+    "requiredTypes": {
+      "MECHANIC": 2,
+      "APPRENTICE": 1
+    }
+  },
+  {
+    "userId": 2,
+    "carId": 2,
+    "name": "车身喷漆",
+    "description": "左侧车门划痕修复和重新喷漆",
+    "requiredTypes": {
+      "PAINTER": 1,
+      "APPRENTICE": 1
+    }
+  },
+  {
+    "userId": 27,
+    "carId": 28,
+    "name": "综合保养",
+    "description": "全面检查和保养，包括更换机油、检查刹车等",
+    "requiredTypes": {
+      "MECHANIC": 1,
+      "PAINTER": 1,
+      "APPRENTICE": 2
+    }
+  }
+]
+```
+
+**响应示例**
+```
+{
+    "code": 200,
+    "data": [
+        {
+            "itemId": 66,
+            "name": "发动机维修",
+            "description": "发动机异响，需要检查和维修",
+            "status": "PENDING",
+            "progress": 0,
+            "result": null,
+            "reminder": null,
+            "score": null,
+            "createTime": "2025-06-15T11:04:55.4378002",
+            "updateTime": "2025-06-15T11:04:55.4378002",
+            "completeTime": null,
+            "materialCost": null,
+            "laborCost": null,
+            "cost": 0.0,
+            "car": {
+                "carId": 1,
+                "brand": "丰田",
+                "model": "凯美瑞",
+                "licensePlate": "京A12345"
+            },
+            "repairmenAcceptance": {
+                "Repairman{repairmanId=72, username='repairmanBai', name='repairmanBai', type=MECHANIC}": false,
+                "Repairman{repairmanId=1, username='repairman01', name='张师傅', type=MECHANIC}": false,
+                "Repairman{repairmanId=5, username='repairman05', name='刘师傅', type=APPRENTICE}": false
+            },
+            "requiredTypes": [],
+            "pendingRepairmen": [
+                {
+                    "repairmanId": 72,
+                    "username": "repairmanBai",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "repairmanBai",
+                    "phone": "19921021304",
+                    "email": "repairmanBai@motify.com",
+                    "gender": "男",
+                    "type": "MECHANIC",
+                    "hourlyRate": 80.0
+                },
+                {
+                    "repairmanId": 1,
+                    "username": "repairman01",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "张师傅",
+                    "phone": "13800138001",
+                    "email": "zhang@motify.com",
+                    "gender": "男",
+                    "type": "MECHANIC",
+                    "hourlyRate": 80.0
+                },
+                {
+                    "repairmanId": 5,
+                    "username": "repairman05",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "刘师傅",
+                    "phone": "13800138005",
+                    "email": "liu@motify.com",
+                    "gender": "女",
+                    "type": "APPRENTICE",
+                    "hourlyRate": 35.0
+                }
+            ],
+            "acceptedRepairmen": [],
+            "repairmen": [
+                {
+                    "repairmanId": 72,
+                    "username": "repairmanBai",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "repairmanBai",
+                    "phone": "19921021304",
+                    "email": "repairmanBai@motify.com",
+                    "gender": "男",
+                    "type": "MECHANIC",
+                    "hourlyRate": 80.0
+                },
+                {
+                    "repairmanId": 1,
+                    "username": "repairman01",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "张师傅",
+                    "phone": "13800138001",
+                    "email": "zhang@motify.com",
+                    "gender": "男",
+                    "type": "MECHANIC",
+                    "hourlyRate": 80.0
+                },
+                {
+                    "repairmanId": 5,
+                    "username": "repairman05",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "刘师傅",
+                    "phone": "13800138005",
+                    "email": "liu@motify.com",
+                    "gender": "女",
+                    "type": "APPRENTICE",
+                    "hourlyRate": 35.0
+                }
+            ]
+        },
+        {
+            "itemId": 67,
+            "name": "车身喷漆",
+            "description": "左侧车门划痕修复和重新喷漆",
+            "status": "PENDING",
+            "progress": 0,
+            "result": null,
+            "reminder": null,
+            "score": null,
+            "createTime": "2025-06-15T11:04:55.5896745",
+            "updateTime": "2025-06-15T11:04:55.5896745",
+            "completeTime": null,
+            "materialCost": null,
+            "laborCost": null,
+            "cost": 0.0,
+            "car": {
+                "carId": 2,
+                "brand": "本田",
+                "model": "雅阁",
+                "licensePlate": "沪B67890"
+            },
+            "repairmenAcceptance": {
+                "Repairman{repairmanId=4, username='repairman04', name='赵师傅', type=PAINTER}": false,
+                "Repairman{repairmanId=5, username='repairman05', name='刘师傅', type=APPRENTICE}": false
+            },
+            "requiredTypes": [],
+            "pendingRepairmen": [
+                {
+                    "repairmanId": 4,
+                    "username": "repairman04",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "赵师傅",
+                    "phone": "13800138004",
+                    "email": "zhao@motify.com",
+                    "gender": "男",
+                    "type": "PAINTER",
+                    "hourlyRate": 100.0
+                },
+                {
+                    "repairmanId": 5,
+                    "username": "repairman05",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "刘师傅",
+                    "phone": "13800138005",
+                    "email": "liu@motify.com",
+                    "gender": "女",
+                    "type": "APPRENTICE",
+                    "hourlyRate": 35.0
+                }
+            ],
+            "acceptedRepairmen": [],
+            "repairmen": [
+                {
+                    "repairmanId": 4,
+                    "username": "repairman04",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "赵师傅",
+                    "phone": "13800138004",
+                    "email": "zhao@motify.com",
+                    "gender": "男",
+                    "type": "PAINTER",
+                    "hourlyRate": 100.0
+                },
+                {
+                    "repairmanId": 5,
+                    "username": "repairman05",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "刘师傅",
+                    "phone": "13800138005",
+                    "email": "liu@motify.com",
+                    "gender": "女",
+                    "type": "APPRENTICE",
+                    "hourlyRate": 35.0
+                }
+            ]
+        },
+        {
+            "itemId": 68,
+            "name": "综合保养",
+            "description": "全面检查和保养，包括更换机油、检查刹车等",
+            "status": "PENDING",
+            "progress": 0,
+            "result": null,
+            "reminder": null,
+            "score": null,
+            "createTime": "2025-06-15T11:04:55.6206482",
+            "updateTime": "2025-06-15T11:04:55.6206482",
+            "completeTime": null,
+            "materialCost": null,
+            "laborCost": null,
+            "cost": 0.0,
+            "car": {
+                "carId": 28,
+                "brand": "奔驰",
+                "model": "A200",
+                "licensePlate": "云AK1234"
+            },
+            "repairmenAcceptance": {
+                "Repairman{repairmanId=72, username='repairmanBai', name='repairmanBai', type=MECHANIC}": false,
+                "Repairman{repairmanId=4, username='repairman04', name='赵师傅', type=PAINTER}": false,
+                "Repairman{repairmanId=5, username='repairman05', name='刘师傅', type=APPRENTICE}": false
+            },
+            "requiredTypes": [],
+            "pendingRepairmen": [
+                {
+                    "repairmanId": 72,
+                    "username": "repairmanBai",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "repairmanBai",
+                    "phone": "19921021304",
+                    "email": "repairmanBai@motify.com",
+                    "gender": "男",
+                    "type": "MECHANIC",
+                    "hourlyRate": 80.0
+                },
+                {
+                    "repairmanId": 4,
+                    "username": "repairman04",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "赵师傅",
+                    "phone": "13800138004",
+                    "email": "zhao@motify.com",
+                    "gender": "男",
+                    "type": "PAINTER",
+                    "hourlyRate": 100.0
+                },
+                {
+                    "repairmanId": 5,
+                    "username": "repairman05",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "刘师傅",
+                    "phone": "13800138005",
+                    "email": "liu@motify.com",
+                    "gender": "女",
+                    "type": "APPRENTICE",
+                    "hourlyRate": 35.0
+                }
+            ],
+            "acceptedRepairmen": [],
+            "repairmen": [
+                {
+                    "repairmanId": 72,
+                    "username": "repairmanBai",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "repairmanBai",
+                    "phone": "19921021304",
+                    "email": "repairmanBai@motify.com",
+                    "gender": "男",
+                    "type": "MECHANIC",
+                    "hourlyRate": 80.0
+                },
+                {
+                    "repairmanId": 4,
+                    "username": "repairman04",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "赵师傅",
+                    "phone": "13800138004",
+                    "email": "zhao@motify.com",
+                    "gender": "男",
+                    "type": "PAINTER",
+                    "hourlyRate": 100.0
+                },
+                {
+                    "repairmanId": 5,
+                    "username": "repairman05",
+                    "password": "FeKw08M4keuw8e9gnsQZQgwg4yDOlMZfvIwzEkSOsiU=",
+                    "name": "刘师傅",
+                    "phone": "13800138005",
+                    "email": "liu@motify.com",
+                    "gender": "女",
+                    "type": "APPRENTICE",
+                    "hourlyRate": 35.0
+                }
+            ]
+        }
+    ],
+    "message": "success"
+}
+```
+
 **库存管理建议**:
 - 定期检查低库存材料，及时补充
 - 根据使用频率和维修需求调整库存水平

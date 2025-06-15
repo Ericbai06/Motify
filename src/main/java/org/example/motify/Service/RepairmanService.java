@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 @Service
@@ -656,8 +657,39 @@ public class RepairmanService {
         Long maintenanceItemId = Long.valueOf(payload.get("maintenanceItemId").toString());
         String description = (String) payload.get("description");
         Long repairmanId = Long.valueOf(payload.get("repairmanId").toString());
-        Integer workHours = Integer.valueOf(payload.get("workHours").toString());
-        LocalDateTime startTime = LocalDateTime.parse(payload.get("startTime").toString());
+        
+        // 修复工作时长解析 - 先解析为Double再转换为Long
+        Object workHoursObj = payload.get("workHours");
+        Long workHours;
+        if (workHoursObj instanceof String) {
+            // 如果是字符串，先转为Double再转为Long
+            workHours = Math.round(Double.parseDouble(workHoursObj.toString()));
+        } else if (workHoursObj instanceof Number) {
+            // 如果是数字，直接转换
+            workHours = Math.round(((Number) workHoursObj).doubleValue());
+        } else {
+            throw new BadRequestException("工作时长格式不正确");
+        }
+        
+        // 修复日期时间解析 - 处理ISO 8601格式
+        String startTimeStr = payload.get("startTime").toString();
+        LocalDateTime startTime;
+        try {
+            // 处理带时区的ISO格式 (如: 2025-06-09T04:09:38.000Z)
+            if (startTimeStr.endsWith("Z")) {
+                // 移除Z后缀，因为LocalDateTime不处理时区信息
+                String localTimeStr = startTimeStr.substring(0, startTimeStr.length() - 1);
+                startTime = LocalDateTime.parse(localTimeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            } else if (startTimeStr.contains("T")) {
+                // 处理不带时区的ISO格式 (如: 2025-06-09T04:09:38.000)
+                startTime = LocalDateTime.parse(startTimeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            } else {
+                // 尝试其他常见格式
+                startTime = LocalDateTime.parse(startTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            }
+        } catch (Exception e) {
+            throw new BadRequestException("开始时间格式不正确，请使用ISO 8601格式（如：2025-06-09T04:09:38.000Z）: " + e.getMessage());
+        }
 
         MaintenanceItem item = maintenanceItemRepository.findById(maintenanceItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", maintenanceItemId));
@@ -677,6 +709,7 @@ public class RepairmanService {
         MaintenanceRecord savedRecord = maintenanceRecordRepository.save(record);
 
         // 处理材料
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> materials = (List<Map<String, Object>>) payload.get("materials");
         if (materials != null) {
             for (Map<String, Object> mat : materials) {
@@ -704,7 +737,8 @@ public class RepairmanService {
         maintenanceItem.setDescription(description);
         maintenanceItem.setCar(carRepository.findById(carId)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", carId)));
-        maintenanceItem.setStatus(MaintenanceStatus.PENDING);
+        // 当有工种需求时，设置状态为AWAITING_ASSIGNMENT等待分配维修工
+        maintenanceItem.setStatus(MaintenanceStatus.AWAITING_ASSIGNMENT);
         maintenanceItem.setProgress(0);
         maintenanceItem.setCreateTime(LocalDateTime.now());
         maintenanceItem.setUpdateTime(LocalDateTime.now());
