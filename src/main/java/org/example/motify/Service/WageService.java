@@ -6,6 +6,8 @@ import org.example.motify.Entity.MaintenanceRecord;
 import org.example.motify.Repository.RepairmanRepository;
 import org.example.motify.Repository.MaintenanceRecordRepository;
 import org.example.motify.Repository.WageRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class WageService {
+
+    private static final Logger logger = LoggerFactory.getLogger(WageService.class);
 
     @Autowired
     private RepairmanRepository repairmanRepository;
@@ -37,6 +41,7 @@ public class WageService {
      */
     @Transactional
     public List<Wage> calculateMonthlyWages(int year, int month) {
+        logger.info("开始计算{}年{}月的工资", year, month);
         // 计算起止时间
         LocalDateTime startDate = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime endDate = startDate.plusMonths(1).minusSeconds(1);
@@ -44,15 +49,18 @@ public class WageService {
         // 先删除该月份的所有工资记录，确保重复计算时不会有冲突
         List<Wage> existingWages = wageRepository.findByYearAndMonth(year, month);
         if (!existingWages.isEmpty()) {
+            logger.info("发现已有工资记录{}条，删除旧数据", existingWages.size());
             wageRepository.deleteAll(existingWages);
         }
 
         // 获取所有维修人员
         List<Repairman> repairmen = repairmanRepository.findAll();
+        logger.info("本月维修人员数量: {}", repairmen.size());
         List<Wage> wages = new ArrayList<>();
 
         // 获取该月份所有维修记录
         List<MaintenanceRecord> allMonthRecords = recordRepository.findByStartTimeBetween(startDate, endDate);
+        logger.info("本月维修记录数量: {}", allMonthRecords.size());
 
         // 按维修人员分组
         Map<Long, List<MaintenanceRecord>> recordsByRepairman = allMonthRecords.stream()
@@ -64,15 +72,20 @@ public class WageService {
             List<MaintenanceRecord> records = recordsByRepairman.getOrDefault(
                     repairman.getRepairmanId(), new ArrayList<>());
 
+            logger.info("维修人员[{}-{}]本月工单数: {}", repairman.getRepairmanId(), repairman.getName(), records.size());
+
             // 只有有工作记录的维修人员才计算工资
             if (!records.isEmpty()) {
-                // 计算总工时（分钟）和收入
+                // 计算总工时（小时）和收入
                 double totalHours = records.stream()
-                        .mapToLong(MaintenanceRecord::getWorkHours)
+                        .mapToDouble(MaintenanceRecord::getWorkHours)
                         .sum() / 60.0; // 转换为小时
 
                 double hourlyRate = repairman.getHourlyRate();
                 double totalIncome = totalHours * hourlyRate;
+
+                logger.info("维修人员[{}-{}] 总工时: {}, 工时单价: {}, 总收入: {}", repairman.getRepairmanId(), repairman.getName(),
+                        totalHours, hourlyRate, totalIncome);
 
                 // 创建工资记录
                 Wage wage = new Wage();
@@ -88,9 +101,13 @@ public class WageService {
 
                 // 保存到数据库
                 wages.add(wageRepository.save(wage));
+
+                for (MaintenanceRecord record : records) {
+                    logger.info("工单ID={}, workHours={}", record.getRecordId(), record.getWorkHours());
+                }
             }
         }
-
+        logger.info("{}年{}月工资计算完成，生成工资记录{}条", year, month, wages.size());
         return wages;
     }
 

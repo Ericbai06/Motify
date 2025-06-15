@@ -6,6 +6,8 @@ import org.example.motify.Repository.RepairmanRepository;
 import org.example.motify.Repository.WageRepository;
 import org.example.motify.Service.WageService;
 import org.example.motify.config.SchedulingConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/wages")
 public class WageController {
+
+    private static final Logger logger = LoggerFactory.getLogger(WageController.class);
 
     @Autowired
     private WageRepository wageRepository;
@@ -115,14 +119,17 @@ public class WageController {
             @RequestParam(required = false) Integer year,
             @RequestParam Long repairmanId) {
 
+        logger.info("调用 /api/wages/my/yearly-stats, repairmanId={}, year={}", repairmanId, year);
         if (year == null) {
             year = LocalDate.now().getYear();
         }
 
         // 获取指定年份的所有工资记录
         List<Wage> yearWages = wageRepository.findByRepairmanIdAndYear(repairmanId, year);
+        logger.info("查询到 {} 年工资记录 {} 条", year, yearWages.size());
 
         if (yearWages.isEmpty()) {
+            logger.info("{}年没有工资记录", year);
             return ResponseEntity.ok(createSuccessResponse(Collections.emptyMap(),
                     String.format("%d年没有工资记录", year)));
         }
@@ -133,12 +140,10 @@ public class WageController {
         double averageMonthlyIncome = totalIncome / yearWages.size();
         double averageHourlyRate = totalIncome / totalHours;
 
-        // 查找收入最高的月份
         Wage highestMonth = yearWages.stream()
                 .max(Comparator.comparing(Wage::getTotalIncome))
                 .orElseThrow();
 
-        // 构建响应数据
         Map<String, Object> stats = new HashMap<>();
         stats.put("year", year);
         stats.put("totalIncome", totalIncome);
@@ -152,6 +157,9 @@ public class WageController {
                 .sorted(Comparator.comparing(Wage::getMonth))
                 .collect(Collectors.toList()));
 
+        logger.info("年度统计: totalIncome={}, totalHours={}, averageMonthlyIncome={}, averageHourlyRate={}", totalIncome,
+                totalHours, averageMonthlyIncome, averageHourlyRate);
+
         return ResponseEntity.ok(createSuccessResponse(stats));
     }
 
@@ -160,56 +168,48 @@ public class WageController {
      */
     @GetMapping("/my/summary")
     public ResponseEntity<?> getMyWageSummary(@RequestParam Long repairmanId) {
+        logger.info("调用 /api/wages/my/summary, repairmanId={}", repairmanId);
         List<Wage> allWages = wageService.getRepairmanWages(repairmanId);
+        logger.info("查询到工资记录 {} 条", allWages.size());
 
         if (allWages.isEmpty()) {
+            logger.info("没有工资记录");
             return ResponseEntity.ok(createSuccessResponse(Collections.emptyMap(), "没有工资记录"));
         }
 
-        // 计算基本统计数据
         double totalIncome = allWages.stream().mapToDouble(Wage::getTotalIncome).sum();
         double totalHours = allWages.stream().mapToDouble(Wage::getTotalWorkHours).sum();
         int totalMonths = allWages.size();
         double averageMonthlyIncome = totalIncome / totalMonths;
 
-        // 计算过去三个月的收入
         int currentYear = LocalDate.now().getYear();
         int currentMonth = LocalDate.now().getMonthValue();
         List<Wage> recentWages = new ArrayList<>();
-
-        // 收集过去三个月的工资记录
         for (int i = 0; i < 3; i++) {
             int targetMonth = currentMonth - i;
             int targetYear = currentYear;
-
             if (targetMonth <= 0) {
                 targetMonth += 12;
                 targetYear -= 1;
             }
-
             final int month = targetMonth;
             final int year = targetYear;
-
             allWages.stream()
                     .filter(w -> w.getYear() == year && w.getMonth() == month)
                     .findFirst()
                     .ifPresent(recentWages::add);
         }
-
         double recent3MonthsIncome = recentWages.stream()
                 .mapToDouble(Wage::getTotalIncome)
                 .sum();
 
-        // 获取最高和最低收入月份
         Wage highestMonth = allWages.stream()
                 .max(Comparator.comparing(Wage::getTotalIncome))
                 .orElseThrow();
-
         Wage lowestMonth = allWages.stream()
                 .min(Comparator.comparing(Wage::getTotalIncome))
                 .orElseThrow();
 
-        // 构建响应数据
         Map<String, Object> summary = new HashMap<>();
         summary.put("totalIncome", totalIncome);
         summary.put("totalWorkHours", totalHours);
@@ -220,14 +220,15 @@ public class WageController {
         summary.put("highestMonthIncome", highestMonth.getTotalIncome());
         summary.put("lowestMonth", String.format("%d年%d月", lowestMonth.getYear(), lowestMonth.getMonth()));
         summary.put("lowestMonthIncome", lowestMonth.getTotalIncome());
-
-        // 计算年度收入趋势
         Map<Integer, Double> yearlyTrend = allWages.stream()
                 .collect(Collectors.groupingBy(
                         Wage::getYear,
                         Collectors.summingDouble(Wage::getTotalIncome)));
-
         summary.put("yearlyTrend", yearlyTrend);
+
+        logger.info(
+                "工资摘要: totalIncome={}, totalHours={}, totalMonths={}, averageMonthlyIncome={}, recent3MonthsIncome={}",
+                totalIncome, totalHours, totalMonths, averageMonthlyIncome, recent3MonthsIncome);
 
         return ResponseEntity.ok(createSuccessResponse(summary));
     }
