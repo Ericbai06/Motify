@@ -5,11 +5,14 @@ import org.example.motify.Exception.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.example.motify.Repository.MaintenanceItemRepository;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.example.motify.Enum.MaintenanceStatus;
 import org.example.motify.Enum.RepairmanType;
 
 @Service
@@ -17,6 +20,9 @@ public class BatchRepairService {
 
     @Autowired
     private RepairmanService repairmanService;
+
+    @Autowired
+    private MaintenanceItemRepository maintenanceItemRepository;
 
     @Transactional
     public List<MaintenanceItem> batchSubmitRepairRequests(List<Map<String, Object>> requests) {
@@ -39,6 +45,12 @@ public class BatchRepairService {
 
                 MaintenanceItem item = repairmanService.submitRepairRequest(
                         userId, carId, name, description, requiredTypes);
+                if (requiredTypesRaw == null || requiredTypesRaw.size() == 0) {
+                    item.setStatus(MaintenanceStatus.AWAITING_ASSIGNMENT);
+                } else {
+                    item.setStatus(MaintenanceStatus.PENDING);
+                }
+                maintenanceItemRepository.save(item);
                 createdItems.add(item);
             }
             return createdItems;

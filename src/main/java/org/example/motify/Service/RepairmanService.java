@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +26,8 @@ import java.util.ArrayList;
 @Transactional
 @RequiredArgsConstructor
 public class RepairmanService {
+    private static final Logger logger = LoggerFactory.getLogger(RepairmanService.class);
+
     @Autowired
     private final RepairmanRepository repairmanRepository;
     @Autowired
@@ -224,20 +228,24 @@ public class RepairmanService {
 
     @Transactional(readOnly = true)
     public List<MaintenanceItem> getRepairmanMaintenanceItems(Long repairmanId) {
-        Repairman repairman = repairmanRepository.findById(repairmanId)
-                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-
-        // 获取所有工单
-        List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
-
-        // 过滤掉已经被该维修人员拒绝的工单
+        List<MaintenanceItem> allItems = maintenanceItemRepository.findByRepairmanId(repairmanId);
         return allItems.stream()
                 .filter(item -> {
-                    // 检查维修人员是否在工单的repairmenAcceptance中
                     Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
-                    return acceptance != null && acceptance.containsKey(repairman);
+                    if (acceptance == null)
+                        return false;
+                    // acceptance 里没有 repairmanId=72，说明 is_accepted=null，应返回
+                    if (acceptance.keySet().stream().noneMatch(r -> r.getRepairmanId().equals(repairmanId))) {
+                        return true;
+                    }
+                    // 否则，只有 value==null 或 true 时返回
+                    for (Map.Entry<Repairman, Boolean> entry : acceptance.entrySet()) {
+                        if (entry.getKey().getRepairmanId().equals(repairmanId)) {
+                            return entry.getValue() == null || Boolean.TRUE.equals(entry.getValue());
+                        }
+                    }
+                    return false;
                 })
-                .distinct()
                 .toList();
     }
 
@@ -315,18 +323,20 @@ public class RepairmanService {
      */
     @Transactional(readOnly = true)
     public List<MaintenanceItem> getRepairmanRejectedItems(Long repairmanId) {
-        Repairman repairman = repairmanRepository.findById(repairmanId)
-                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-
-        List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
-
-        // 只保留被该维修人员明确拒绝的工单
+        // 直接用数据库查询获取与该维修人员相关的所有工单（包括已拒绝的）
+        List<MaintenanceItem> allItems = maintenanceItemRepository.findByRepairmanId(repairmanId);
+        // 只保留 is_accepted 为 false 的工单
         return allItems.stream()
                 .filter(item -> {
                     Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
-                    return acceptance != null
-                            && acceptance.containsKey(repairman)
-                            && Boolean.FALSE.equals(acceptance.get(repairman));
+                    if (acceptance == null)
+                        return false;
+                    for (Map.Entry<Repairman, Boolean> entry : acceptance.entrySet()) {
+                        if (entry.getKey().getRepairmanId().equals(repairmanId)) {
+                            return Boolean.FALSE.equals(entry.getValue());
+                        }
+                    }
+                    return false;
                 })
                 .toList();
     }
@@ -336,9 +346,21 @@ public class RepairmanService {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
 
-        // 检查工单是否存在
-        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        // 使用新的数据库查询方法获取MaintenanceItem及其关联数据
+        MaintenanceItem item = maintenanceItemRepository.findItemByIdWithDetails(itemId);
+        if (item == null) {
+            throw new ResourceNotFoundException("MaintenanceItem", "id", itemId);
+        }
+
+        // 检查 item-repairman 表中的 is_accepted 值
+        Boolean isAccepted = maintenanceItemRepository.checkRepairmanAcceptance(itemId, repairmanId);
+        if (isAccepted != null) {
+            if (isAccepted) {
+                throw new BadRequestException("您已经接受过该工单");
+            } else {
+                throw new BadRequestException("您已经拒绝过该工单，无法再次接受");
+            }
+        }
 
         // 如果工单状态是ACCEPTED，说明已经被其他维修人员接收
         if (maintenanceItemRepository.countByItemIdAndStatusAccepted(itemId) > 0) {
@@ -351,16 +373,43 @@ public class RepairmanService {
             throw new BadRequestException("工单当前状态不允许接收");
         }
 
-        // 将维修人员添加到工单
-        maintenanceItemRepository.addRepairmanToItem(itemId, repairmanId);
+        if (item.getRepairmen() == null) {
+            item.setRepairmen(new java.util.ArrayList<>());
+        } else if (item.getRepairmen().contains(repairman)) {
+            throw new BadRequestException("工单已被该维修人员接收");
+        }
+        item.getRepairmen().add(repairman);
 
         // 更新对应工种的已分配数量
         RepairmanType type = repairman.getType();
-        requiredTypeRepository.incrementAssignedCount(itemId, type.name());
+        for (RequiredRepairmanType requirement : item.getRequiredTypes()) {
+            if (requirement.getType() == type) {
+                requirement.setAssigned(requirement.getAssigned() + 1);
+                requiredTypeRepository.save(requirement);
+                break;
+            }
+        }
 
-        // 返回更新后的工单
-        return maintenanceItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        // 检查所有工种是否都分配完成
+        boolean allAssigned = true;
+        for (RequiredRepairmanType requirement : item.getRequiredTypes()) {
+            if (requirement.getAssigned() < requirement.getRequired()) {
+                allAssigned = false;
+                break;
+            }
+        }
+        if (allAssigned) {
+            item.setStatus(MaintenanceStatus.ACCEPTED);
+            item.setProgress(0);
+            item.setUpdateTime(java.time.LocalDateTime.now());
+        }
+
+        // 关键：这里要加上
+        maintenanceItemRepository.acceptRepairman(itemId, repairmanId);
+
+        // 保存更新后的工单
+        MaintenanceItem updatedItem = maintenanceItemRepository.save(item);
+        return updatedItem;
     }
 
     // 以维修记录为例，统计材料费用
@@ -385,31 +434,33 @@ public class RepairmanService {
     // 拒绝维修工单
     @Transactional
     public MaintenanceItem rejectMaintenanceItem(Long repairmanId, Long itemId, String reason) {
-        // 获取维修人员
+        // 检查 item-repairman 表中的 is_accepted 值
+        Boolean isAccepted = maintenanceItemRepository.checkRepairmanAcceptance(itemId, repairmanId);
+        if (isAccepted != null) {
+            if (isAccepted) {
+                throw new BadRequestException("您已经接受过该工单，无法拒绝");
+            } else {
+                throw new BadRequestException("您已经拒绝过该工单");
+            }
+        }
+
+        // 直接调用 repository 层的原生 SQL 方法，将 is_accepted 设为 false
+        maintenanceItemRepository.rejectRepairman(itemId, repairmanId);
+
+        // 使用新的数据库查询方法获取MaintenanceItem
+        MaintenanceItem item = maintenanceItemRepository.findItemByIdWithDetails(itemId);
+        if (item == null) {
+            throw new ResourceNotFoundException("MaintenanceItem", "id", itemId);
+        }
+
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
 
-        // 获取工单
-        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
-
-        // 通过数据库操作将is_accepted设为0（拒绝）
-        maintenanceItemRepository.rejectRepairmanForItem(itemId, repairmanId);
-
-        // 找出此维修人员的工种
-        RepairmanType type = repairman.getType();
-
-        // 确保工单状态为PENDING，因为它需要重新分配
-        if (item.getStatus() != MaintenanceStatus.PENDING) {
-            item.setStatus(MaintenanceStatus.PENDING);
-        }
-        // 保存工单状态
+        assignNextRepairman(item, repairman.getType());
         maintenanceItemRepository.save(item);
 
-        // 尝试分配新的维修人员
-        assignNextRepairman(item, type);
-
-        return item;
+        // 返回最新工单信息
+        return maintenanceItemRepository.findItemByIdWithDetails(itemId);
     }
 
     private void assignNextRepairman(MaintenanceItem item, RepairmanType type) {
@@ -428,31 +479,19 @@ public class RepairmanService {
         // 查找工作量最少的维修人员
         List<Repairman> availableRepairmen = repairmanRepository.findByTypeOrderByWorkloadAsc(type);
 
-        // 排除已经接受这个工单的维修人员（状态为true的）
-        List<Repairman> alreadyAccepted = new ArrayList<>();
-        for (Map.Entry<Repairman, Boolean> entry : item.getRepairmenAcceptance().entrySet()) {
-            if (Boolean.TRUE.equals(entry.getValue())) {
-                alreadyAccepted.add(entry.getKey());
-            }
+        // 排除已经分配给这个工单的维修人员
+        List<Long> assignedIds = maintenanceItemRepository.findAllAssignedRepairmanIds(item.getItemId());
+        availableRepairmen.removeIf(r -> assignedIds.contains(r.getRepairmanId()));
+
+        if (availableRepairmen.isEmpty()) {
+            throw new BadRequestException("没有足够的维修人员可分配");
         }
-        availableRepairmen.removeAll(alreadyAccepted);
 
-        if (!availableRepairmen.isEmpty()) {
-            // 分配给工作量最少的维修人员
-            Repairman nextRepairman = availableRepairmen.get(0);
-            item.addRepairman(nextRepairman, false);
-
-            // 更新已分配数量
-            for (RequiredRepairmanType req : item.getRequiredTypes()) {
-                if (req.getType() == type) {
-                    req.setAssigned(req.getAssigned() + 1);
-                    requiredTypeRepository.save(req);
-                    break;
-                }
-            }
-
-            maintenanceItemRepository.save(item);
-        }
+        // 分配给工作量最少的维修人员
+        Repairman nextRepairman = availableRepairmen.get(0);
+        maintenanceItemRepository.assignRepairman(item.getItemId(), nextRepairman.getRepairmanId());
+        // 注意：不再在这里增加 assigned，assigned 只在 accept 时增加
+        maintenanceItemRepository.save(item);
     }
 
     // 更新维修进度
@@ -462,9 +501,11 @@ public class RepairmanService {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
 
-        // 确认工单存在
-        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        // 使用新的数据库查询方法获取MaintenanceItem
+        MaintenanceItem item = maintenanceItemRepository.findItemByIdWithDetails(itemId);
+        if (item == null) {
+            throw new ResourceNotFoundException("MaintenanceItem", "id", itemId);
+        }
 
         // 确认工单已被接受并且属于该维修人员
         if (!item.getRepairmen().contains(repairman)) {
@@ -493,9 +534,11 @@ public class RepairmanService {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
 
-        // 确认工单存在
-        MaintenanceItem item = maintenanceItemRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
+        // 使用新的数据库查询方法获取MaintenanceItem
+        MaintenanceItem item = maintenanceItemRepository.findItemByIdWithDetails(itemId);
+        if (item == null) {
+            throw new ResourceNotFoundException("MaintenanceItem", "id", itemId);
+        }
 
         // 确认工单已被接受并且属于该维修人员
         if (!item.getRepairmen().contains(repairman)) {
@@ -509,7 +552,7 @@ public class RepairmanService {
         item.setCompleteTime(java.time.LocalDateTime.now());
         item.setUpdateTime(java.time.LocalDateTime.now());
 
-        return item;
+        return maintenanceItemRepository.save(item);
     }
 
     // 计算收入统计
@@ -673,12 +716,12 @@ public class RepairmanService {
     }
 
     public void autoAssignRepairmen(MaintenanceItem item) {
-        // 先保存并刷新确保能获取到完整关联数据
-        MaintenanceItem savedItem = maintenanceItemRepository.saveAndFlush(item);
+        // // 先保存并刷新确保能获取到完整关联数据
+        // MaintenanceItem savedItem = maintenanceItemRepository.saveAndFlush(item);
 
         // 重新从数据库获取带有全部关联的工单
-        MaintenanceItem refreshedItem = maintenanceItemRepository.findById(savedItem.getItemId())
-                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", savedItem.getItemId()));
+        MaintenanceItem refreshedItem = maintenanceItemRepository.findById(item.getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", item.getItemId()));
 
         // 从数据库加载这个工单的所有工种需求
         List<RequiredRepairmanType> requirements = requiredTypeRepository
@@ -701,7 +744,10 @@ public class RepairmanService {
                     break;
 
                 // 分配给此维修人员
-                refreshedItem.addRepairman(repairman, false); // 初始状态为未接受
+                // refreshedItem.addRepairman(repairman, false); // 初始状态为未接受
+                logger.info("assignRepairman: " + refreshedItem.getItemId() + " " + repairman.getRepairmanId());
+                logger.info("repairman: " + repairman.toString());
+                maintenanceItemRepository.assignRepairman(refreshedItem.getItemId(), repairman.getRepairmanId());
                 assigned++;
             }
 
