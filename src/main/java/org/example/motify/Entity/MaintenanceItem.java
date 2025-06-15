@@ -102,7 +102,7 @@ public class MaintenanceItem {
             return List.of();
         }
         return repairmenAcceptance.entrySet().stream()
-                .filter(Map.Entry::getValue) // 筛选已接受的维修人员
+                .filter(entry -> Boolean.TRUE.equals(entry.getValue())) // 排除null和false值
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
@@ -117,7 +117,7 @@ public class MaintenanceItem {
             return List.of();
         }
         return repairmenAcceptance.entrySet().stream()
-                .filter(entry -> !entry.getValue()) // 筛选未接受的维修人员
+                .filter(entry -> Boolean.FALSE.equals(entry.getValue())) // 筛选未接受的维修人员
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
@@ -159,18 +159,18 @@ public class MaintenanceItem {
         }
     }
 
-    /**
-     * 添加维修人员并设置接受状态
-     * 
-     * @param repairman 维修人员
-     * @param accepted  是否接受
-     */
-    public void addRepairman(Repairman repairman, boolean accepted) {
-        if (this.repairmenAcceptance == null) {
-            this.repairmenAcceptance = new java.util.HashMap<>();
-        }
-        this.repairmenAcceptance.put(repairman, accepted);
-    }
+    // /**
+    // * 添加维修人员并设置接受状态
+    // *
+    // * @param repairman 维修人员
+    // * @param accepted 是否接受
+    // */
+    // public void addRepairman(Repairman repairman, boolean accepted) {
+    // if (this.repairmenAcceptance == null) {
+    // this.repairmenAcceptance = new java.util.HashMap<>();
+    // }
+    // this.repairmenAcceptance.put(repairman, accepted);
+    // }
 
     public List<RequiredRepairmanType> getRequiredTypes() {
         if (requiredTypes == null) {
