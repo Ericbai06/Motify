@@ -237,6 +237,7 @@ public class RepairmanService {
                     Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
                     return acceptance != null && acceptance.containsKey(repairman);
                 })
+                .distinct()
                 .toList();
     }
 
@@ -314,26 +315,20 @@ public class RepairmanService {
      */
     @Transactional(readOnly = true)
     public List<MaintenanceItem> getRepairmanRejectedItems(Long repairmanId) {
-        try {
-            Repairman repairman = repairmanRepository.findById(repairmanId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
 
-            // 获取所有与该维修人员相关的工单（包括已拒绝的）
-            List<MaintenanceItem> allItems = maintenanceItemRepository.findByRepairmanId(repairmanId);
+        List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
 
-            // 获取维修人员当前的工单（未拒绝的）
-            List<MaintenanceItem> currentItems = getRepairmanMaintenanceItems(repairmanId);
-
-            // 过滤出已拒绝的工单（在所有工单中但不在当前工单中）
-            return allItems.stream()
-                    .filter(item -> !currentItems.contains(item))
-                    .toList();
-        } catch (Exception e) {
-            // 记录异常并返回空列表，避免服务器内部错误
-            System.err.println("获取已拒绝工单时发生错误: " + e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        // 只保留被该维修人员明确拒绝的工单
+        return allItems.stream()
+                .filter(item -> {
+                    Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
+                    return acceptance != null
+                            && acceptance.containsKey(repairman)
+                            && Boolean.FALSE.equals(acceptance.get(repairman));
+                })
+                .toList();
     }
 
     public MaintenanceItem acceptMaintenanceItem(Long repairmanId, Long itemId) {
@@ -398,29 +393,16 @@ public class RepairmanService {
         MaintenanceItem item = maintenanceItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", itemId));
 
-        // 将此维修人员的接受状态设置为false，而不是删除
-        Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
-        if (acceptance != null) {
-            acceptance.put(repairman, false); // 设置为拒绝状态
-        }
+        // 通过数据库操作将is_accepted设为0（拒绝）
+        maintenanceItemRepository.rejectRepairmanForItem(itemId, repairmanId);
 
         // 找出此维修人员的工种
         RepairmanType type = repairman.getType();
 
-        // // 更新对该工种的已分配数量
-        // for (RequiredRepairmanType requirement : item.getRequiredTypes()) {
-        // if (requirement.getType() == type) {
-        // requirement.setAssigned(requirement.getAssigned() - 1);
-        // requiredTypeRepository.save(requirement);
-        // break;
-        // }
-        // }
-
         // 确保工单状态为PENDING，因为它需要重新分配
-        if (item.getStatus() != MaintenanceStatus.AWAITING_ASSIGNMENT) {
-            item.setStatus(MaintenanceStatus.AWAITING_ASSIGNMENT);
+        if (item.getStatus() != MaintenanceStatus.PENDING) {
+            item.setStatus(MaintenanceStatus.PENDING);
         }
-
         // 保存工单状态
         maintenanceItemRepository.save(item);
 
@@ -584,7 +566,7 @@ public class RepairmanService {
         Long maintenanceItemId = Long.valueOf(payload.get("maintenanceItemId").toString());
         String description = (String) payload.get("description");
         Long repairmanId = Long.valueOf(payload.get("repairmanId").toString());
-        
+
         // 修复工作时长解析 - 先解析为Double再转换为Long
         Object workHoursObj = payload.get("workHours");
         Long workHours;
@@ -597,7 +579,7 @@ public class RepairmanService {
         } else {
             throw new BadRequestException("工作时长格式不正确");
         }
-        
+
         // 修复日期时间解析 - 处理ISO 8601格式
         String startTimeStr = payload.get("startTime").toString();
         LocalDateTime startTime;

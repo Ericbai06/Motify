@@ -44,4 +44,9 @@ public interface MaintenanceItemRepository extends JpaRepository<MaintenanceItem
         @Transactional
         @Query(value = "INSERT INTO item_repairman (item_id, repairman_id, is_accepted) VALUES (:itemId, :repairmanId, 1) ON DUPLICATE KEY UPDATE is_accepted = 1", nativeQuery = true)
         int addRepairmanToItem(@Param("itemId") Long itemId, @Param("repairmanId") Long repairmanId);
+
+        @Modifying
+        @Transactional
+        @Query(value = "INSERT INTO item_repairman (item_id, repairman_id, is_accepted) VALUES (:itemId, :repairmanId, 0) ON DUPLICATE KEY UPDATE is_accepted = 0", nativeQuery = true)
+        int rejectRepairmanForItem(@Param("itemId") Long itemId, @Param("repairmanId") Long repairmanId);
 }
