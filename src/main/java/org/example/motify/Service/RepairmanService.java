@@ -534,73 +534,14 @@ public class RepairmanService {
             throw new BadRequestException("该工单不属于此维修人员");
         }
 
-        // 计算材料费用并更新库存
-        double materialCost = 0.0;
-        if (materialsUsed != null && !materialsUsed.isEmpty()) {
-            for (Map<String, Object> materialInfo : materialsUsed) {
-                Long materialId = Long.valueOf(materialInfo.get("materialId").toString());
-                Integer quantity = (Integer) materialInfo.get("quantity");
-
-                Material material = materialRepository.findById(materialId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Material", "id", materialId));
-
-                if (material.getStock() < quantity) {
-                    throw new BadRequestException("材料 " + material.getName() + " 库存不足");
-                }
-
-                material.setStock(material.getStock() - quantity);
-                materialRepository.save(material);
-
-                materialCost += material.getPrice() * quantity;
-            }
-        }
-
-        // 计算工时费
-        Double hourlyRate = repairman.getHourlyRate();
-        double laborCost = hourlyRate * workingHours;
-
-        // 更新工单信息
+        // 只设置状态和其他必要信息
         item.setStatus(MaintenanceStatus.COMPLETED);
         item.setProgress(100);
         item.setResult(result);
-        item.setMaterialCost(materialCost);
-        item.setLaborCost(laborCost);
-        item.setCost(materialCost + laborCost);
         item.setCompleteTime(java.time.LocalDateTime.now());
         item.setUpdateTime(java.time.LocalDateTime.now());
 
-        // 保存工单更新
-        MaintenanceItem updatedItem = maintenanceItemRepository.save(item);
-
-        // 创建维修记录
-        MaintenanceRecord record = new MaintenanceRecord();
-        record.setMaintenanceItem(updatedItem);
-        record.setName("完成维修：" + updatedItem.getName());
-        record.setDescription(result);
-        record.setRepairManId(repairmanId);
-        // 将小时转换为分钟
-        record.setWorkHours(Math.round(workingHours * 60));
-        // 设置开始时间 - 从当前时间减去工作时长
-        record.setStartTime(LocalDateTime.now());
-        MaintenanceRecord savedRecord = maintenanceRecordRepository.save(record);
-
-        // 对每个材料创建记录
-        if (materialsUsed != null) {
-            for (Map<String, Object> materialInfo : materialsUsed) {
-                Long materialId = Long.valueOf(materialInfo.get("materialId").toString());
-                Integer quantity = (Integer) materialInfo.get("quantity");
-
-                // 创建材料使用记录
-                RecordMaterial recordMaterial = new RecordMaterial();
-                // 不再设置 id，使用数据库的自动递增功能
-                recordMaterial.setRecordId(savedRecord.getRecordId());
-                recordMaterial.setMaterialId(materialId);
-                recordMaterial.setAmount(quantity);
-                recordMaterialRepository.save(recordMaterial);
-            }
-        }
-
-        return updatedItem;
+        return item;
     }
 
     // 计算收入统计
