@@ -66,4 +66,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
         long countByStartTimeBetween(
                         @Param("startTime") LocalDateTime startTime,
                         @Param("endTime") LocalDateTime endTime);
+
+        // 在MaintenanceRecordRepository接口中添加
+        List<MaintenanceRecord> findByMaintenanceItem_ItemIdAndRepairManId(Long itemId, Long repairManId);
 }

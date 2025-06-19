@@ -20,6 +20,8 @@ import java.util.Optional;
 import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 @Service
 @Transactional
@@ -298,22 +300,35 @@ public class RepairmanService {
     }
 
     @Transactional(readOnly = true)
-    public List<MaintenanceItem> getRepairmanCompletedRecords(Long repairmanId) {
+    public List<Map<String, Object>> getRepairmanCompletedRecords(Long repairmanId) {
         Repairman repairman = repairmanRepository.findById(repairmanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
 
-        // 获取所有工单
         List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
 
-        // 过滤掉已经被该维修人员拒绝的工单，并且只返回已完成的工单
-        return allItems.stream()
+        // 过滤获取已完成工单
+        List<MaintenanceItem> completedItems = allItems.stream()
                 .filter(item -> {
-                    // 检查维修人员是否在工单的repairmenAcceptance中
                     Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
                     return acceptance != null && acceptance.containsKey(repairman);
                 })
-                .filter(record -> record.getProgress() == 100)
+                .filter(item -> item.getStatus() == MaintenanceStatus.COMPLETED)
                 .toList();
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (MaintenanceItem item : completedItems) {
+            List<MaintenanceRecord> records = maintenanceRecordRepository
+                    .findByMaintenanceItem_ItemIdAndRepairManId(item.getItemId(), repairmanId);
+            double personalLaborCost = records.stream()
+                    .mapToDouble(r -> r.getLaborCost() != null ? r.getLaborCost() : 0)
+                    .sum();
+            Map<String, Object> map = new HashMap<>();
+            map.put("item", item);
+            map.put("personalLaborCost", personalLaborCost);
+            result.add(map);
+        }
+        logger.info("getRepairmanCompletedRecords result: {}", result);
+        return result;
     }
 
     /**
@@ -681,7 +696,7 @@ public class RepairmanService {
         if (materials != null && !materials.isEmpty()) {
             materialService.useMaterials(materials, savedRecord.getRecordId());
         }
-        
+
         return savedRecord;
     }
 
@@ -881,9 +896,10 @@ public class RepairmanService {
         autoAssignRepairmen(item);
         return item;
     }
-    
+
     /**
      * 删除维修记录并恢复材料库存
+     * 
      * @param recordId 维修记录ID
      * @throws ResourceNotFoundException 当维修记录不存在时
      */
@@ -892,19 +908,20 @@ public class RepairmanService {
         // 检查维修记录是否存在
         MaintenanceRecord record = maintenanceRecordRepository.findById(recordId)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceRecord", "id", recordId));
-        
+
         // 使用MaterialService恢复材料库存
         materialService.restoreMaterialStock(recordId);
-        
+
         // 删除材料使用记录
         recordMaterialRepository.deleteByRecordId(recordId);
-        
+
         // 删除维修记录
         maintenanceRecordRepository.delete(record);
     }
-    
+
     /**
      * 取消材料使用并恢复库存（用于维修记录修改等场景）
+     * 
      * @param recordId 维修记录ID
      */
     @Transactional

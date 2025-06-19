@@ -88,11 +88,39 @@ public class RepairmanController {
         return ExceptionLogger.createSuccessResponse(records);
     }
 
-    // 获取已完成维修记录
+    /**
+     * 获取维修人员已完成的维修工单及其个人工时费统计。
+     * <p>
+     * 前端传入repairmanId，后端返回该维修人员所有已完成（COMPLETED状态）的工单，
+     * 并在每个工单的返回体中增加personalLaborCost字段，表示该维修人员在该工单下的工时费总和。
+     * <br>
+     * <b>请求示例：</b>
+     * 
+     * <pre>
+     * {
+     *   "repairmanId": 1
+     * }
+     * </pre>
+     * 
+     * <b>返回示例：</b>
+     * 
+     * <pre>
+     * [
+     *   {
+     *     "item": { ...MaintenanceItem对象... },
+     *     "personalLaborCost": 120.0
+     *   },
+     *   ...
+     * ]
+     * </pre>
+     * 
+     * @param payload 包含repairmanId的Map
+     * @return 统一响应结构，data字段为List<Map<String, Object>>，每个Map包含item和personalLaborCost
+     */
     @PostMapping("/completed-records")
     public ResponseEntity<?> getCompletedRecords(@RequestBody Map<String, Long> payload) {
         Long repairmanId = payload.get("repairmanId");
-        List<MaintenanceItem> records = repairmanService.getRepairmanCompletedRecords(repairmanId);
+        List<Map<String, Object>> records = repairmanService.getRepairmanCompletedRecords(repairmanId);
         return ExceptionLogger.createSuccessResponse(records);
     }
 
