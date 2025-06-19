@@ -42,4 +42,13 @@ public class MaintenanceRecord {
     @Column(name = "amount")
     @JsonIgnore
     private Map<Long, Integer> materialAmounts;
+
+    @Column
+    private Double cost; // 维修总成本
+
+    @Column
+    private Double materialCost; // 材料费用
+
+    @Column
+    private Double laborCost; // 工时费用
 }
