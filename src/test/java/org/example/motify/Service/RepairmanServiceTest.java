@@ -56,6 +56,9 @@ class RepairmanServiceTest {
     @Mock
     private RequiredRepairmanTypeRepository requiredTypeRepository;
 
+    @Mock
+    private MaterialService materialService;
+
     @InjectMocks
     private RepairmanService repairmanService;
 
@@ -501,7 +504,7 @@ class RepairmanServiceTest {
         when(repairmanRepository.save(any())).thenReturn(repairman);
         RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
                 materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
-                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+                requiredTypeRepository, carRepository, repairmanHistoryRepository, mock(MaterialService.class));
         Repairman result = service.undoRepairmanHistory(repairmanId);
         assertNotNull(result);
         verify(repairmanRepository).save(any());
@@ -513,7 +516,7 @@ class RepairmanServiceTest {
         when(repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId)).thenReturn(List.of());
         RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
                 materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
-                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+                requiredTypeRepository, carRepository, repairmanHistoryRepository, mock(MaterialService.class));
         assertThrows(BadRequestException.class, () -> service.undoRepairmanHistory(repairmanId));
     }
 
@@ -528,7 +531,7 @@ class RepairmanServiceTest {
         when(repairmanHistoryRepository.findByRepairmanIdOrderByOperationTimeDesc(repairmanId)).thenReturn(List.of(h1));
         RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
                 materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
-                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+                requiredTypeRepository, carRepository, repairmanHistoryRepository, mock(MaterialService.class));
         assertThrows(BadRequestException.class, () -> service.undoRepairmanHistory(repairmanId));
     }
 
@@ -559,7 +562,7 @@ class RepairmanServiceTest {
         when(repairmanRepository.save(any())).thenReturn(repairman);
         RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
                 materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
-                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+                requiredTypeRepository, carRepository, repairmanHistoryRepository, mock(MaterialService.class));
         Repairman result = service.redoRepairmanHistory(repairmanId);
         assertNotNull(result);
         verify(repairmanRepository).save(any());
@@ -581,7 +584,7 @@ class RepairmanServiceTest {
                 .thenReturn(null);
         RepairmanService service = new RepairmanService(repairmanRepository, maintenanceItemRepository,
                 materialRepository, maintenanceRecordRepository, recordMaterialRepository, salaryRepository,
-                requiredTypeRepository, carRepository, repairmanHistoryRepository);
+                requiredTypeRepository, carRepository, repairmanHistoryRepository, mock(MaterialService.class));
         assertThrows(BadRequestException.class, () -> service.redoRepairmanHistory(repairmanId));
     }
 }

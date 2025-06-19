@@ -20,7 +20,6 @@ import java.util.Optional;
 import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 
 @Service
 @Transactional
@@ -46,6 +45,8 @@ public class RepairmanService {
     private final CarRepository carRepository;
     @Autowired
     private final RepairmanHistoryRepository repairmanHistoryRepository;
+    @Autowired
+    private final MaterialService materialService;
 
     // 初始化默认薪资标准
     @Transactional
@@ -674,20 +675,13 @@ public class RepairmanService {
 
         MaintenanceRecord savedRecord = maintenanceRecordRepository.save(record);
 
-        // 处理材料
+        // 使用MaterialService处理材料并减少库存
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> materials = (List<Map<String, Object>>) payload.get("materials");
-        if (materials != null) {
-            for (Map<String, Object> mat : materials) {
-                Long materialId = Long.valueOf(mat.get("materialId").toString());
-                Integer amount = Integer.valueOf(mat.get("amount").toString());
-                RecordMaterial rm = new RecordMaterial();
-                rm.setRecordId(savedRecord.getRecordId());
-                rm.setMaterialId(materialId);
-                rm.setAmount(amount);
-                recordMaterialRepository.save(rm);
-            }
+        if (materials != null && !materials.isEmpty()) {
+            materialService.useMaterials(materials, savedRecord.getRecordId());
         }
+        
         return savedRecord;
     }
 
@@ -886,5 +880,35 @@ public class RepairmanService {
         // 调用私有方法完成实际分配
         autoAssignRepairmen(item);
         return item;
+    }
+    
+    /**
+     * 删除维修记录并恢复材料库存
+     * @param recordId 维修记录ID
+     * @throws ResourceNotFoundException 当维修记录不存在时
+     */
+    @Transactional
+    public void deleteMaintenanceRecordAndRestoreStock(Long recordId) {
+        // 检查维修记录是否存在
+        MaintenanceRecord record = maintenanceRecordRepository.findById(recordId)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceRecord", "id", recordId));
+        
+        // 使用MaterialService恢复材料库存
+        materialService.restoreMaterialStock(recordId);
+        
+        // 删除材料使用记录
+        recordMaterialRepository.deleteByRecordId(recordId);
+        
+        // 删除维修记录
+        maintenanceRecordRepository.delete(record);
+    }
+    
+    /**
+     * 取消材料使用并恢复库存（用于维修记录修改等场景）
+     * @param recordId 维修记录ID
+     */
+    @Transactional
+    public void restoreMaterialStock(Long recordId) {
+        materialService.restoreMaterialStock(recordId);
     }
 }

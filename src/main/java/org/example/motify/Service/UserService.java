@@ -463,8 +463,8 @@ public class UserService {
         if (maintenanceItem.getStatus() == MaintenanceStatus.COMPLETED) {
             throw new BadRequestException("该维修项目已完成，无法催单");
         }
-        if (maintenanceItem.getStatus() == MaintenanceStatus.PENDING) {
-            throw new BadRequestException("该维修项目待接受，无法催单");
+        if (maintenanceItem.getStatus() == MaintenanceStatus.CANCELLED) {
+            throw new BadRequestException("该维修项目已取消，无法催单");
         }
 
         // 更新催单信息
