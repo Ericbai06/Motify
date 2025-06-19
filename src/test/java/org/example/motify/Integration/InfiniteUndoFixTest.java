@@ -18,6 +18,7 @@ import org.example.motify.Repository.SalaryRepository;
 import org.example.motify.Repository.RequiredRepairmanTypeRepository;
 import org.example.motify.Service.UserService;
 import org.example.motify.Service.RepairmanService;
+import org.example.motify.Service.MaterialService;
 import org.example.motify.Exception.BadRequestException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,8 @@ public class InfiniteUndoFixTest {
     private SalaryRepository salaryRepository;
     @Mock
     private RequiredRepairmanTypeRepository requiredRepairmanTypeRepository;
+    @Mock
+    private MaterialService materialService;
 
     private UserService userService;
     private RepairmanService repairmanService;
@@ -77,7 +80,7 @@ public class InfiniteUndoFixTest {
                                               materialRepository, maintenanceRecordRepository,
                                               recordMaterialRepository, salaryRepository,
                                               requiredRepairmanTypeRepository, carRepository,
-                                              repairmanHistoryRepository);
+                                              repairmanHistoryRepository, materialService);
     }
 
     @Test

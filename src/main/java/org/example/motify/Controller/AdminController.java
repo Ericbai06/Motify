@@ -627,23 +627,24 @@ public class AdminController {
             List<Object[]> statistics = adminService.getUncompletedTasksByCar();
             List<Map<String, Object>> result = statistics.stream().map(row -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("brand", row[0] != null ? row[0].toString() : "");
-                map.put("model", row[1] != null ? row[1].toString() : "");
-                map.put("licensePlate", row[2] != null ? row[2].toString() : "");
-                map.put("taskCount", row[3] != null ? Integer.parseInt(row[3].toString()) : 0);
-                map.put("taskNames", row[4] != null ? row[4].toString() : "");
+                map.put("carId", row[0] != null ? Long.parseLong(row[0].toString()) : 0L);
+                map.put("brand", row[1] != null ? row[1].toString() : "");
+                map.put("model", row[2] != null ? row[2].toString() : "");
+                map.put("licensePlate", row[3] != null ? row[3].toString() : "");
+                map.put("uncompletedTasks", row[4] != null ? Integer.parseInt(row[4].toString()) : 0);
+                map.put("avgDaysPending", row[5] != null ? Integer.parseInt(row[5].toString()) : 0);
                 return map;
             }).collect(Collectors.toList());
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "获取按车辆统计的未完成任务成功",
+                    "message", "获取车辆未完成任务统计成功",
                     "data", result,
                     "count", result.size()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of(
                     "success", false,
-                    "message", "获取按车辆统计的未完成任务失败：" + e.getMessage()));
+                    "message", "获取车辆未完成任务统计失败：" + e.getMessage()));
         }
     }
 
