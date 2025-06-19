@@ -327,7 +327,6 @@ public class RepairmanService {
             map.put("personalLaborCost", personalLaborCost);
             result.add(map);
         }
-        logger.info("getRepairmanCompletedRecords result: {}", result);
         return result;
     }
 

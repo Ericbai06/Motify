@@ -7,7 +7,7 @@ BEGIN
         
         -- 计算工时费：SUM(工作时长 × 维修人员时薪)
         SET NEW.labor_cost = (
-            SELECT IFNULL(SUM(mr.work_hours * s.hourly_rate), 0)
+            SELECT IFNULL(SUM(mr.work_hours/60.0 * s.hourly_rate), 0)
             FROM maintenance_records mr
             JOIN repairmen r ON mr.repair_man_id = r.repairman_id
             JOIN salaries s ON r.type = s.type

@@ -63,31 +63,27 @@ public class WageInitializer implements ApplicationRunner {
             int startYear = earliestRecord.getYear();
             int startMonth = earliestRecord.getMonthValue();
 
-            // 3. 获取当前时间的上个月（最近一个应结算的月份）
-            LocalDate lastMonth = LocalDate.now().minusMonths(1);
-            int endYear = lastMonth.getYear();
-            int endMonth = lastMonth.getMonthValue();
+            // 3. 获取当前时间的本月（包括本月）
+            LocalDate thisMonth = LocalDate.now().withDayOfMonth(1);
+            int endYear = thisMonth.getYear();
+            int endMonth = thisMonth.getMonthValue();
 
-            logger.info("将检查从 {}-{} 到 {}-{} 的工资数据", startYear, startMonth, endYear, endMonth);
+            logger.info("将检查从 {}-{} 到 {}-{} 的工资数据（允许重复结算）", startYear, startMonth, endYear, endMonth);
 
-            // 4. 获取已经结算过的年月集合
-            Set<String> calculatedMonths = getCalculatedMonths();
-
-            // 5. 遍历所有需要检查的月份
+            // 4. 遍历所有需要检查的月份
             LocalDate currentDate = LocalDate.of(startYear, startMonth, 1);
             LocalDate endDate = LocalDate.of(endYear, endMonth, 1);
 
             while (!currentDate.isAfter(endDate)) {
                 int year = currentDate.getYear();
                 int month = currentDate.getMonthValue();
-                String yearMonthKey = year + "-" + month;
 
                 // 检查该月是否有维修记录
                 boolean hasRecords = hasMaintenanceRecords(year, month);
 
-                // 如果有记录但未结算，则进行结算
-                if (hasRecords && !calculatedMonths.contains(yearMonthKey)) {
-                    logger.info("开始结算 {}-{} 的工资", year, month);
+                // 只要有记录就结算（允许重复结算，覆盖历史工资）
+                if (hasRecords) {
+                    logger.info("开始结算 {}-{} 的工资（覆盖历史）", year, month);
                     wageService.calculateMonthlyWages(year, month);
                     logger.info("{}-{} 工资结算完成", year, month);
                 }

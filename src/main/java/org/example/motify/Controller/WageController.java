@@ -153,6 +153,11 @@ public class WageController {
         stats.put("highestMonth", highestMonth.getMonth());
         stats.put("highestMonthIncome", highestMonth.getTotalIncome());
         stats.put("workingMonths", yearWages.size());
+        stats.put("hourlyRate", highestMonth.getHourlyRate());
+        stats.put("repairmanType", highestMonth.getRepairmanType());
+        //
+        logger.info("hourlyRate: {}", highestMonth.getHourlyRate());
+        logger.info("repairmanType: {}", highestMonth.getRepairmanType());
         stats.put("monthlyDetails", yearWages.stream()
                 .sorted(Comparator.comparing(Wage::getMonth))
                 .collect(Collectors.toList()));
@@ -220,6 +225,8 @@ public class WageController {
         summary.put("highestMonthIncome", highestMonth.getTotalIncome());
         summary.put("lowestMonth", String.format("%d年%d月", lowestMonth.getYear(), lowestMonth.getMonth()));
         summary.put("lowestMonthIncome", lowestMonth.getTotalIncome());
+        summary.put("hourlyRate", highestMonth.getHourlyRate());
+        summary.put("repairmanType", highestMonth.getRepairmanType());
         Map<Integer, Double> yearlyTrend = allWages.stream()
                 .collect(Collectors.groupingBy(
                         Wage::getYear,
