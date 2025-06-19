@@ -750,6 +750,8 @@ public class RepairmanService {
 
             // 查询该工种维修人员并按当前工作量排序
             List<Repairman> availableRepairmen = repairmanRepository.findByTypeOrderByWorkloadAsc(type);
+            logger.info(
+                    "availableRepairmen: " + "type: " + type + " availableRepairmen: " + availableRepairmen.toString());
 
             // 分配需要的数量
             int assigned = 0;
@@ -763,6 +765,9 @@ public class RepairmanService {
                 logger.info("repairman: " + repairman.toString());
                 maintenanceItemRepository.assignRepairman(refreshedItem.getItemId(), repairman.getRepairmanId());
                 assigned++;
+            }
+            if (assigned < needed) {
+                throw new BadRequestException("没有足够的维修人员可分配");
             }
 
             // 不在这里更新已分配数量，而是在维修人员接受工单时更新

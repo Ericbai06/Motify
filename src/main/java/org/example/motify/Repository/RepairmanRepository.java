@@ -22,10 +22,14 @@ public interface RepairmanRepository extends JpaRepository<Repairman, Long> {
     @Query("SELECT r FROM Repairman r WHERE r.type = ?1")
     Optional<Repairman> findByType(String type);
 
-    @Query("SELECT r FROM Repairman r LEFT JOIN r.maintenanceItems m " +
-            "WHERE r.type = :type AND (m.status = 'IN_PROGRESS' OR m.status = 'PENDING' OR m.status = 'ACCEPTED' OR m IS NULL) "
-            +
-            "GROUP BY r ORDER BY COUNT(m)")
+    @Query(value = "SELECT r.* " +
+            "FROM repairmen r " +
+            "LEFT JOIN item_repairman ir ON r.repairman_id = ir.repairman_id " +
+            "LEFT JOIN maintenance_items m ON ir.item_id = m.item_id " +
+            "    AND (m.status = 'IN_PROGRESS' OR m.status = 'PENDING' OR m.status = 'ACCEPTED') " +
+            "WHERE r.type = ?#{#type.name()} " +
+            "GROUP BY r.repairman_id " +
+            "ORDER BY COUNT(m.item_id)", nativeQuery = true)
     List<Repairman> findByTypeOrderByWorkloadAsc(@Param("type") RepairmanType type);
 
     @Query("SELECT r.type FROM Repairman r WHERE r.repairmanId = :repairmanId")
