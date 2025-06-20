@@ -27,7 +27,8 @@ public class BatchRepairService {
     @Transactional
     public List<MaintenanceItem> batchSubmitRepairRequests(List<Map<String, Object>> requests) {
         List<MaintenanceItem> createdItems = new ArrayList<>();
-
+        String info = "";
+        MaintenanceItem try_item = new MaintenanceItem();
         try {
             for (Map<String, Object> requestBody : requests) {
                 Long userId = Long.valueOf(requestBody.get("userId").toString());
@@ -45,6 +46,7 @@ public class BatchRepairService {
 
                 MaintenanceItem item = repairmanService.submitRepairRequest(
                         userId, carId, name, description, requiredTypes);
+                try_item = item;
                 if (requiredTypesRaw == null || requiredTypesRaw.size() == 0) {
                     item.setStatus(MaintenanceStatus.AWAITING_ASSIGNMENT);
                 } else {
@@ -52,11 +54,13 @@ public class BatchRepairService {
                 }
                 maintenanceItemRepository.save(item);
                 createdItems.add(item);
+                info += "工单" + item.getItemId() + "创建成功" + "详情：" + item.getDescription() + "\n";
             }
             return createdItems;
         } catch (Exception e) {
             // 事务会自动回滚
-            throw new BadRequestException("批量处理维修请求失败: " + e.getMessage());
+            throw new BadRequestException(info + "工单" + try_item.getItemId() + "创建成功" + "详情："
+                    + try_item.getDescription() + "\n" + "批量处理维修请求失败: " + e.getMessage() + "事务回滚");
         }
     }
 }
