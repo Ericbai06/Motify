@@ -81,7 +81,7 @@ public class MaintenanceItem {
     private List<RequiredRepairmanType> requiredTypes = new ArrayList<>();
 
     /**
-     * 获取所有分配到该工单的维修人员列表
+     * 获取所有分配到该工单的维修人员列表（排除已拒绝的）
      * 
      * @return 维修人员列表
      */
@@ -89,7 +89,10 @@ public class MaintenanceItem {
         if (repairmenAcceptance == null) {
             return List.of();
         }
-        return new ArrayList<>(repairmenAcceptance.keySet());
+        return repairmenAcceptance.entrySet().stream()
+                .filter(entry -> !Boolean.FALSE.equals(entry.getValue())) // 排除已拒绝的维修人员
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -108,16 +111,31 @@ public class MaintenanceItem {
     }
 
     /**
-     * 获取未接受工单的维修人员列表
+     * 获取待处理工单的维修人员列表（未明确接受或拒绝）
      * 
-     * @return 未接受的维修人员列表
+     * @return 待处理的维修人员列表
      */
     public List<Repairman> getPendingRepairmen() {
         if (repairmenAcceptance == null) {
             return List.of();
         }
         return repairmenAcceptance.entrySet().stream()
-                .filter(entry -> Boolean.FALSE.equals(entry.getValue())) // 筛选未接受的维修人员
+                .filter(entry -> entry.getValue() == null) // 筛选待处理的维修人员（值为null）
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取已拒绝工单的维修人员列表
+     * 
+     * @return 已拒绝的维修人员列表
+     */
+    public List<Repairman> getRejectedRepairmen() {
+        if (repairmenAcceptance == null) {
+            return List.of();
+        }
+        return repairmenAcceptance.entrySet().stream()
+                .filter(entry -> Boolean.FALSE.equals(entry.getValue())) // 筛选已拒绝的维修人员
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
