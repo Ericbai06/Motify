@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.example.motify.Repository.MaintenanceItemRepository;
+import org.example.motify.Repository.MaintenanceRecordRepository;
 
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +34,11 @@ public class AdminController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private MaintenanceItemRepository maintenanceItemRepository;
+    @Autowired
+    private MaintenanceRecordRepository maintenanceRecordRepository;
 
     /**
      * 管理员注册
@@ -210,6 +217,38 @@ public class AdminController {
                     "success", false,
                     "message", "获取维修工单列表失败：" + e.getMessage()));
         }
+    }
+
+    /**
+     * 获取指定维修工单及其所有维修记录
+     *
+     * <p>
+     * 根据工单ID，查询该工单的详细信息（包括车辆、工种需求等）以及所有关联的维修记录。
+     * 返回结构为：
+     * 
+     * <pre>
+     * {
+     *   "item": MaintenanceItem对象,
+     *   "records": List&lt;MaintenanceRecord&gt;
+     * }
+     * </pre>
+     *
+     * @param itemId 维修工单ID
+     * @return ResponseEntity，包含工单详情和维修记录列表；若未找到工单则返回404
+     */
+    @GetMapping("/maintenance-item-records/{itemId}")
+    public ResponseEntity<?> getMaintenanceItem(@PathVariable Long itemId) {
+        // 查询工单
+        MaintenanceItem item = maintenanceItemRepository.findItemByIdWithDetails(itemId);
+        if (item == null) {
+            return ResponseEntity.status(404).body("未找到该工单");
+        }
+        // 查询维修记录
+        List<MaintenanceRecord> records = maintenanceRecordRepository.findByMaintenanceItem_ItemId(itemId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("item", item);
+        result.put("records", records);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -721,6 +760,7 @@ public class AdminController {
 
     /**
      * 删除维修工单
+     * 
      * @param itemId 工单ID
      * @return 删除结果
      */
@@ -728,7 +768,7 @@ public class AdminController {
     public ResponseEntity<?> deleteMaintenanceItem(@PathVariable Long itemId) {
         try {
             adminService.deleteMaintenanceItem(itemId);
-            
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "维修工单删除成功",

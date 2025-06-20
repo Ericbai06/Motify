@@ -11,6 +11,9 @@ import org.example.motify.Enum.RepairmanType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -543,6 +546,7 @@ public class RepairmanService {
             item.setDescription(item.getDescription() + "\n" + description);
         }
         item.setUpdateTime(java.time.LocalDateTime.now());
+        item.setStatus(MaintenanceStatus.IN_PROGRESS);
         return maintenanceItemRepository.save(item);
     }
 
