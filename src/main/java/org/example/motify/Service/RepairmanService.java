@@ -282,20 +282,25 @@ public class RepairmanService {
 
     @Transactional(readOnly = true)
     public List<MaintenanceItem> getRepairmanCurrentRecords(Long repairmanId) {
-        Repairman repairman = repairmanRepository.findById(repairmanId)
-                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
-
-        // 获取所有工单
-        List<MaintenanceItem> allItems = repairman.getMaintenanceItems();
-
-        // 过滤掉已经被该维修人员拒绝的工单，并且只返回未完成的工单
+        List<MaintenanceItem> allItems = maintenanceItemRepository.findByRepairmanId(repairmanId);
         return allItems.stream()
                 .filter(item -> {
-                    // 检查维修人员是否在工单的repairmenAcceptance中
                     Map<Repairman, Boolean> acceptance = item.getRepairmenAcceptance();
-                    return acceptance != null && acceptance.containsKey(repairman);
+                    if (acceptance == null)
+                        return false;
+                    // acceptance 里没有 repairmanId=72，说明 is_accepted=null，应返回
+                    if (acceptance.keySet().stream().noneMatch(r -> r.getRepairmanId().equals(repairmanId))) {
+                        return true;
+                    }
+                    // 否则，只有 value==null 或 true 时返回
+                    for (Map.Entry<Repairman, Boolean> entry : acceptance.entrySet()) {
+                        if (entry.getKey().getRepairmanId().equals(repairmanId)) {
+                            return entry.getValue() == null || Boolean.TRUE.equals(entry.getValue());
+                        }
+                    }
+                    return false;
                 })
-                .filter(record -> record.getProgress() < 100)
+                .filter(item -> item.getProgress() < 100)
                 .toList();
     }
 
