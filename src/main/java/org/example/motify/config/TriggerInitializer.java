@@ -44,7 +44,7 @@ public class TriggerInitializer implements ApplicationListener<ContextRefreshedE
             initializeAssignStatusTrigger();
 
             // 初始化自动计算维修记录费用触发器
-            initializeRecordCostTrigger();
+            // initializeRecordCostTrigger();
 
             initialized = true;
             logger.info("触发器初始化完成");
@@ -85,19 +85,19 @@ public class TriggerInitializer implements ApplicationListener<ContextRefreshedE
         logger.info("自动分配状态触发器初始化完成");
     }
 
-    private void initializeRecordCostTrigger() throws Exception {
-        // 读取SQL文件内容
-        String sqlFileName = "AutoCalcutateReocrdCostTrigger.sql";
-        String triggerSql = new String(Files.readAllBytes(
-                Paths.get(getClass().getClassLoader().getResource(sqlFileName).toURI())));
+    // private void initializeRecordCostTrigger() throws Exception {
+    // // 读取SQL文件内容
+    // String sqlFileName = "AutoCalcutateReocrdCostTrigger.sql";
+    // String triggerSql = new String(Files.readAllBytes(
+    // Paths.get(getClass().getClassLoader().getResource(sqlFileName).toURI())));
 
-        // 先检查并删除已存在的触发器，防止冲突
-        logger.debug("移除已存在的触发器: trg_maintenancerecord_cost");
-        jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_maintenancerecord_cost");
+    // // 先检查并删除已存在的触发器，防止冲突
+    // logger.debug("移除已存在的触发器: trg_maintenancerecord_cost");
+    // jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_maintenancerecord_cost");
 
-        // 执行创建触发器SQL
-        logger.info("创建新触发器: trg_maintenancerecord_cost");
-        jdbcTemplate.execute(triggerSql);
-        logger.info("维修记录费用计算触发器初始化完成");
-    }
+    // // 执行创建触发器SQL
+    // logger.info("创建新触发器: trg_maintenancerecord_cost");
+    // jdbcTemplate.execute(triggerSql);
+    // logger.info("维修记录费用计算触发器初始化完成");
+    // }
 }

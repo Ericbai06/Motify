@@ -574,6 +574,8 @@ public class RepairmanService {
         recordPayload.put("startTime", startTime.toString());
         recordPayload.put("name", "维修完成-" + result + "-" + endTime.toString());
         recordPayload.put("materials", materialsUsed);
+
+        // 添加维修记录（内部会计算费用）
         this.addMaintenanceRecord(recordPayload);
 
         // 只设置状态和其他必要信息
@@ -675,6 +677,32 @@ public class RepairmanService {
         MaintenanceItem item = maintenanceItemRepository.findById(maintenanceItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceItem", "id", maintenanceItemId));
 
+        // 计算laborCost
+        double hourlyRate = 0;
+        Repairman repairman = repairmanRepository.findById(repairmanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Repairman", "id", repairmanId));
+        if (repairman.getHourlyRate() != null) {
+            hourlyRate = repairman.getHourlyRate();
+        }
+        // double laborCost = workHours / 60.0 * hourlyRate;
+
+        // // 计算materialCost
+        // double materialCost = 0;
+        // @SuppressWarnings("unchecked")
+        // List<Map<String, Object>> materials = (List<Map<String, Object>>)
+        // payload.get("materials");
+        // if (materials != null && !materials.isEmpty()) {
+        // for (Map<String, Object> mat : materials) {
+        // Long materialId = Long.valueOf(mat.get("materialId").toString());
+        // Integer amount = Integer.valueOf(mat.get("amount").toString());
+        // Material material = materialRepository.findById(materialId)
+        // .orElseThrow(() -> new ResourceNotFoundException("Material", "id",
+        // materialId));
+        // materialCost += material.getPrice() * amount;
+        // }
+        // }
+        // double cost = laborCost + materialCost;
+
         MaintenanceRecord record = new MaintenanceRecord();
         record.setMaintenanceItem(item);
         record.setDescription(description);
@@ -682,21 +710,35 @@ public class RepairmanService {
         record.setWorkHours(workHours);
         record.setStartTime(startTime);
 
+        // 初始化费用字段为0，后续更新
+        record.setLaborCost(0.0);
+        record.setMaterialCost(0.0);
+        record.setCost(0.0);
+
         String name = payload.get("name") != null
                 ? payload.get("name").toString()
                 : (description != null ? description : "维修记录") + "-" + startTime.toString();
         record.setName(name);
 
+        // 先保存记录，获取ID
         MaintenanceRecord savedRecord = maintenanceRecordRepository.save(record);
 
-        // 使用MaterialService处理材料并减少库存
+        // 处理材料并减少库存
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> materials = (List<Map<String, Object>>) payload.get("materials");
         if (materials != null && !materials.isEmpty()) {
             materialService.useMaterials(materials, savedRecord.getRecordId());
         }
 
-        return savedRecord;
+        // 使用Repository方法计算并更新费用
+        maintenanceRecordRepository.calculateAndUpdateCosts(savedRecord.getRecordId());
+
+        // 更新维修工单的总费用
+        maintenanceItemRepository.updateItemCost(maintenanceItemId);
+
+        // 重新获取更新后的记录
+        return maintenanceRecordRepository.findById(savedRecord.getRecordId())
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceRecord", "id", savedRecord.getRecordId()));
     }
 
     public MaintenanceItem submitRepairRequest(Long userId, Long carId, String name, String description,
@@ -908,6 +950,9 @@ public class RepairmanService {
         MaintenanceRecord record = maintenanceRecordRepository.findById(recordId)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceRecord", "id", recordId));
 
+        // 获取维修工单ID，用于后续更新总费用
+        Long itemId = record.getMaintenanceItem().getItemId();
+
         // 使用MaterialService恢复材料库存
         materialService.restoreMaterialStock(recordId);
 
@@ -916,15 +961,10 @@ public class RepairmanService {
 
         // 删除维修记录
         maintenanceRecordRepository.delete(record);
+
+        // 更新维修工单的总费用
+        maintenanceItemRepository.updateItemCost(itemId);
+        logger.info("维修记录 {} 已删除，并更新了维修工单 {} 的总费用", recordId, itemId);
     }
 
-    /**
-     * 取消材料使用并恢复库存（用于维修记录修改等场景）
-     * 
-     * @param recordId 维修记录ID
-     */
-    @Transactional
-    public void restoreMaterialStock(Long recordId) {
-        materialService.restoreMaterialStock(recordId);
-    }
 }

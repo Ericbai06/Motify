@@ -70,4 +70,32 @@ public interface MaintenanceItemRepository extends JpaRepository<MaintenanceItem
 
         @Query(value = "SELECT status FROM maintenance_items WHERE item_id = :itemId", nativeQuery = true)
         String getItemStatus(@Param("itemId") Long itemId);
+
+        /**
+         * 更新维修工单的总费用（基于所有相关维修记录）
+         * 
+         * @param itemId 维修工单ID
+         * @return 更新的行数
+         */
+        @Modifying
+        @Transactional
+        @Query(value = "UPDATE maintenance_items mi " +
+                        "SET cost = (SELECT COALESCE(SUM(mr.cost), 0) " +
+                        "FROM maintenance_records mr " +
+                        "WHERE mr.item_id = mi.item_id) " +
+                        "WHERE mi.item_id = :itemId", nativeQuery = true)
+        int updateItemCost(@Param("itemId") Long itemId);
+
+        /**
+         * 批量更新所有维修工单的总费用
+         * 
+         * @return 更新的行数
+         */
+        @Modifying
+        @Transactional
+        @Query(value = "UPDATE maintenance_items mi " +
+                        "SET cost = (SELECT COALESCE(SUM(mr.cost), 0) " +
+                        "FROM maintenance_records mr " +
+                        "WHERE mr.item_id = mi.item_id)", nativeQuery = true)
+        int updateAllItemCosts();
 }

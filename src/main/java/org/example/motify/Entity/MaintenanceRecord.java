@@ -43,12 +43,12 @@ public class MaintenanceRecord {
     @JsonIgnore
     private Map<Long, Integer> materialAmounts;
 
-    @Column
-    private Double cost; // 维修总成本
+    @Column(name = "cost")
+    private Double cost;
 
-    @Column
-    private Double materialCost; // 材料费用
+    @Column(name = "labor_cost")
+    private Double laborCost;
 
-    @Column
-    private Double laborCost; // 工时费用
+    @Column(name = "material_cost")
+    private Double materialCost;
 }
