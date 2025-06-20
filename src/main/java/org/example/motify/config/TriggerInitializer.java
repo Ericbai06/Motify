@@ -43,6 +43,9 @@ public class TriggerInitializer implements ApplicationListener<ContextRefreshedE
             // 初始化自动分配状态触发器
             initializeAssignStatusTrigger();
 
+            // 初始化自动结算工资触发器
+            initializeSettleWageTrigger();
+
             // 初始化自动计算维修记录费用触发器
             // initializeRecordCostTrigger();
 
@@ -83,6 +86,22 @@ public class TriggerInitializer implements ApplicationListener<ContextRefreshedE
         logger.info("创建新触发器: trg_required_repairman_type_updated");
         jdbcTemplate.execute(triggerSql);
         logger.info("自动分配状态触发器初始化完成");
+    }
+
+    private void initializeSettleWageTrigger() throws Exception {
+        // 读取SQL文件内容
+        String sqlFileName = "SettleWageTrigger.sql";
+        String triggerSql = new String(Files.readAllBytes(
+                Paths.get(getClass().getClassLoader().getResource(sqlFileName).toURI())));
+
+        // 先检查并删除已存在的触发器，防止冲突
+        logger.debug("移除已存在的触发器: trg_settle_wage_on_completed");
+        jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_settle_wage_on_completed");
+
+        // 执行创建触发器SQL
+        logger.info("创建新触发器: trg_settle_wage_on_completed");
+        jdbcTemplate.execute(triggerSql);
+        logger.info("工资结算触发器初始化完成");
     }
 
     // private void initializeRecordCostTrigger() throws Exception {
